@@ -1,0 +1,1844 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cuerpo Humano VR - A-Frame</title>
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script>
+        // Variable global para saber si el usuario ya interactuó
+        let userInteracted = false;
+        
+        // Componente para efecto visual de selección
+        AFRAME.registerComponent('selection-feedback', {
+            init: function () {
+                this.originalScale = this.el.getAttribute('scale');
+            },
+            playFeedback: function () {
+                // Efecto de pulso con brillo
+                this.el.setAttribute('animation__pulse', {
+                    property: 'scale',
+                    to: {
+                        x: this.originalScale.x * 1.2,
+                        y: this.originalScale.y * 1.2,
+                        z: this.originalScale.z * 1.2
+                    },
+                    dur: 200,
+                    dir: 'alternate',
+                    loop: 1,
+                    easing: 'easeOutQuad'
+                });
+                
+                // Brillo momentáneo
+                const material = this.el.getAttribute('material');
+                if (material) {
+                    const originalEmissive = material.emissive || '#000000';
+                    const originalEmissiveIntensity = material.emissiveIntensity || 0;
+                    
+                    this.el.setAttribute('material', {
+                        emissive: '#ffff00',
+                        emissiveIntensity: 0.6
+                    });
+                    
+                    setTimeout(() => {
+                        this.el.setAttribute('material', {
+                            emissive: originalEmissive,
+                            emissiveIntensity: originalEmissiveIntensity
+                        });
+                    }, 300);
+                }
+            }
+        });
+
+        // Componente para manejar el audio con mirada
+        AFRAME.registerComponent('gaze-audio', {
+            schema: {
+                src: { type: 'string' },
+                duration: { type: 'number', default: 1.5 },
+                cooldown: { type: 'number', default: 15000 } // 15 segundos de cooldown
+            },
+            init: function () {
+                this.gazeStartTime = null;
+                this.audioPlaying = false;
+                this.progressReset = false;
+                this.audioLoaded = false;
+                this.lastPlayTime = 0; // Timestamp del último play
+                this.inCooldown = false;
+                
+                // Agregar componente de feedback visual
+                this.el.setAttribute('selection-feedback', '');
+                
+                // Usar el componente de audio de A-Frame para mejor compatibilidad
+                this.soundId = 'sound-' + Math.random().toString(36).substr(2, 9);
+                
+                // Crear elemento de audio
+                const audioEl = document.createElement('audio');
+                audioEl.id = this.soundId;
+                audioEl.src = this.data.src;
+                audioEl.preload = 'auto';
+                audioEl.crossOrigin = 'anonymous';
+                
+                audioEl.addEventListener('canplaythrough', () => {
+                    this.audioLoaded = true;
+                    console.log(`✅ Audio cargado: ${this.data.src}`);
+                });
+                
+                audioEl.addEventListener('error', (e) => {
+                    console.log(`❌ Error cargando audio: ${this.data.src}`, e);
+                });
+                
+                audioEl.addEventListener('ended', () => {
+                    console.log('⏹️ Audio terminado');
+                    this.audioPlaying = false;
+                    
+                    // Iniciar cooldown
+                    this.inCooldown = true;
+                    this.lastPlayTime = Date.now();
+                    console.log(`⏰ Cooldown iniciado: ${this.data.cooldown / 1000}s`);
+                    
+                    setTimeout(() => {
+                        this.inCooldown = false;
+                        console.log('✅ Cooldown terminado, audio disponible nuevamente');
+                    }, this.data.cooldown);
+                });
+                
+                document.body.appendChild(audioEl);
+                this.audio = audioEl;
+                
+                // Eventos del cursor
+                this.el.addEventListener('mouseenter', (evt) => {
+                    console.log('👁️ Mirando:', this.el.getAttribute('data-name'));
+                    this.gazeStartTime = Date.now();
+                    this.progressReset = false;
+                    
+                    // Efecto visual
+                    const currentScale = this.el.getAttribute('scale');
+                    this.originalScale = currentScale;
+                    this.el.setAttribute('scale', {
+                        x: currentScale.x * 1.05,
+                        y: currentScale.y * 1.05,
+                        z: currentScale.z * 1.05
+                    });
+                });
+                
+                this.el.addEventListener('mouseleave', (evt) => {
+                    console.log('👁️ Dejó de mirar:', this.el.getAttribute('data-name'));
+                    this.gazeStartTime = null;
+                    this.progressReset = true;
+                    
+                    // Reiniciar flag de audio para permitir nuevo intento
+                    if (this.audioPlaying && this.audio && this.audio.paused) {
+                        console.log('🔄 Reiniciando flag de audio (no se estaba reproduciendo)');
+                        this.audioPlaying = false;
+                    }
+                    
+                    // Restaurar escala
+                    if (this.originalScale) {
+                        this.el.setAttribute('scale', this.originalScale);
+                    }
+                });
+                
+                // Evento click
+                this.el.addEventListener('click', (evt) => {
+                    console.log('🖱️ Click en:', this.el.getAttribute('data-name'));
+                    userInteracted = true;
+                    this.playAudio();
+                });
+            },
+            tick: function () {
+                if (this.gazeStartTime && !this.progressReset) {
+                    const elapsed = (Date.now() - this.gazeStartTime) / 1000;
+                    
+                    // Log cada 0.5 segundos
+                    if (elapsed > 0 && Math.floor(elapsed * 2) !== this.lastLogTick) {
+                        this.lastLogTick = Math.floor(elapsed * 2);
+                        console.log(`⏱️ Mirando ${this.el.getAttribute('data-name')}: ${elapsed.toFixed(1)}s / ${this.data.duration}s`);
+                    }
+                    
+                    if (elapsed >= this.data.duration && !this.audioPlaying) {
+                        console.log(`✅ Tiempo completado! Reproduciendo...`);
+                        this.playAudio();
+                    }
+                }
+            },
+            playAudio: function () {
+                console.log(`🎵 playAudio llamado para: ${this.el.getAttribute('data-name')}`);
+                
+                // Verificar si la secuencia final ya comenzó (para evitar reproducción múltiple)
+                const finalController = this.el.components['final-sequence-controller'];
+                if (finalController && finalController.sequenceStarted) {
+                    console.log('⚠️ Secuencia final ya en progreso, ignorando reproducción');
+                    return;
+                }
+                
+                // NUEVO: Verificar que el sistema esté visible antes de reproducir
+                const parentSystem = this.el.closest('[id^="sistema-"]');
+                if (parentSystem) {
+                    const isVisible = parentSystem.getAttribute('visible');
+                    const systemScale = parentSystem.getAttribute('scale');
+                    
+                    // Verificar si el sistema está visible Y tiene escala mayor a 0
+                    if (!isVisible || (systemScale && (systemScale.x === 0 || systemScale.y === 0 || systemScale.z === 0))) {
+                        console.log(`⚠️ Sistema ${parentSystem.id} no está visible o tiene escala 0, ignorando reproducción`);
+                        return;
+                    }
+                    
+                    // Si es el sistema circulatorio, verificar que heart.glb esté visible
+                    if (parentSystem.id === 'sistema-circulatorio') {
+                        const heartModel = parentSystem.querySelector('[gltf-model*="Heart.glb"]');
+                        if (heartModel) {
+                            const heartVisible = heartModel.getAttribute('visible');
+                            const heartScale = heartModel.getAttribute('scale');
+                            if (heartVisible === false || (heartScale && (heartScale.x === 0 || heartScale.y === 0 || heartScale.z === 0))) {
+                                console.log('⚠️ Heart.glb no está visible, ignorando reproducción del circulatorio');
+                                return;
+                            }
+                        }
+                    }
+                }
+                
+                // Verificar cooldown
+                if (this.inCooldown) {
+                    const timeLeft = Math.ceil((this.data.cooldown - (Date.now() - this.lastPlayTime)) / 1000);
+                    console.log(`⏰ Audio en cooldown. Espera ${timeLeft}s más`);
+                    return;
+                }
+                
+                if (this.audioPlaying) {
+                    console.log('⚠️ Audio ya está reproduciéndose');
+                    console.log('📊 Estado actual del audio:', {
+                        paused: this.audio.paused,
+                        currentTime: this.audio.currentTime,
+                        duration: this.audio.duration
+                    });
+                    return;
+                }
+                
+                if (!this.audioLoaded) {
+                    console.log('⚠️ Audio aún no está cargado, esperando...');
+                    // Reintentar en 500ms
+                    setTimeout(() => this.playAudio(), 500);
+                    return;
+                }
+                
+                if (!window.userInteracted) {
+                    console.log('⚠️ Usuario aún no ha interactuado');
+                    return;
+                }
+                
+                // Reproducir sonido de click
+                const clickSound = document.getElementById('clickSound');
+                if (clickSound) {
+                    clickSound.currentTime = 0;
+                    clickSound.play().catch(e => console.log('Error reproduciendo click:', e));
+                }
+                
+                // Efecto visual de selección
+                const feedbackComponent = this.el.components['selection-feedback'];
+                if (feedbackComponent) {
+                    feedbackComponent.playFeedback();
+                }
+                
+                this.audioPlaying = true;
+                this.gazeStartTime = null;
+                
+                console.log(`🔊 Intentando reproducir: ${this.data.src}`);
+                console.log(`📊 Estado del audio ANTES de play():`, {
+                    paused: this.audio.paused,
+                    readyState: this.audio.readyState,
+                    duration: this.audio.duration,
+                    volume: this.audio.volume,
+                    src: this.audio.src
+                });
+                
+                // Detener otros audios
+                document.querySelectorAll('[gaze-audio]').forEach(el => {
+                    if (el !== this.el && el.components['gaze-audio']) {
+                        el.components['gaze-audio'].stopAudio();
+                    }
+                });
+                
+                // Asegurar volumen
+                this.audio.volume = 1.0;
+                
+                // Reproducir audio
+                this.audio.currentTime = 0;
+                
+                console.log('🎬 Llamando a audio.play()...');
+                const playPromise = this.audio.play();
+                
+                console.log('📦 Tipo de playPromise:', typeof playPromise, playPromise);
+                
+                if (playPromise !== undefined) {
+                    playPromise
+                        .then(() => {
+                            console.log('✅✅✅ Audio reproduciéndose correctamente! ✅✅✅');
+                            console.log('📊 Estado del audio DESPUÉS de play():', {
+                                paused: this.audio.paused,
+                                currentTime: this.audio.currentTime,
+                                duration: this.audio.duration
+                            });
+                        })
+                        .catch(error => {
+                            console.error('❌❌❌ Error al reproducir audio! ❌❌❌');
+                            console.error('Tipo de error:', error.name);
+                            console.error('Mensaje:', error.message);
+                            console.error('Error completo:', error);
+                            this.audioPlaying = false;
+                        });
+                } else {
+                    console.log('⚠️ audio.play() no devolvió una Promise');
+                }
+            },
+            stopAudio: function () {
+                if (this.audio && !this.audio.paused) {
+                    this.audio.pause();
+                    this.audio.currentTime = 0;
+                    console.log('⏸️ Audio detenido');
+                }
+                this.audioPlaying = false;
+                this.gazeStartTime = null;
+            },
+            remove: function () {
+                if (this.audio) {
+                    this.audio.remove();
+                }
+            }
+        });
+
+        // Componente de debug para el cursor
+        AFRAME.registerComponent('cursor-debug', {
+            init: function () {
+                this.el.addEventListener('raycaster-intersection', (evt) => {
+                    const intersectedEls = evt.detail.els;
+                    console.log('🎯 Cursor detecta:', intersectedEls.length, 'elementos');
+                    intersectedEls.forEach(el => {
+                        console.log('  - Elemento:', el.getAttribute('data-name') || el.className);
+                    });
+                });
+                
+                this.el.addEventListener('raycaster-intersection-cleared', (evt) => {
+                    console.log('👁️ Cursor dejó de apuntar a los elementos');
+                });
+            }
+        });
+
+        // Componente para animación de respiración
+        // Componente para animación de respiración (mejorado para expansión en 3D)
+// Componente para animación de respiración (Corregido: Solo Eje Y)
+        AFRAME.registerComponent('breathing', {
+            schema: {
+                // Amplitud de la respiración (cuánto se expande/contrae)
+                amplitude: { type: 'number', default: 0.05 },
+                // Velocidad de la respiración
+                speed: { type: 'number', default: 0.001 },
+                // Offset inicial para que no se sincronicen
+                timeOffset: { type: 'number', default: Math.random() * 1000 }
+            },
+            init: function () {
+                // Guarda la escala original (ej: "5 15 5")
+                this.originalScale = this.el.object3D.scale.clone();
+            },
+            tick: function (time) {
+                const data = this.data;
+                
+                // Calcula el factor de respiración (ej: 1.08, 1.0, 0.92, etc.)
+                const breathFactor = 1 + Math.sin((time + data.timeOffset) * data.speed) * data.amplitude;
+                
+                // Aplica la escala SÓLO al eje Y
+                this.el.object3D.scale.set(
+                    this.originalScale.x,              // <-- Mantiene el '5' original
+                    this.originalScale.y * breathFactor, // <-- Anima el '15' (ej: 15 * 1.08)
+                    this.originalScale.z              // <-- Mantiene el '5' original
+                );
+            }
+        });
+        // Componente para latido del corazón
+        // Componente para latido del corazón (Versión LUB-DUB realista)
+        AFRAME.registerComponent('heartbeat', {
+            schema: {
+                // Escala MÁXIMA del latido (LUB)
+                lubScale: { type: 'number', default: 1.25 },
+                // Escala del segundo latido (DUB)
+                dubScale: { type: 'number', default: 1.1 },
+                // Latidos por minuto
+                bpm: { type: 'number', default: 75 }
+            },
+
+            init: function () {
+                // Guardar la escala original con la que empieza la entidad
+                this.originalScale = this.el.object3D.scale.clone();
+                
+                // Calcular duración de un latido completo en milisegundos
+                // (60,000 ms en un minuto) / 75 bpm = 800ms por latido
+                this.beatDuration = 60000 / this.data.bpm;
+                
+                // Definir cuándo ocurre cada fase (en milisegundos)
+                this.lubStart = 0; // "LUB" empieza en 0ms
+                this.lubDur = 120; // "LUB" dura 120ms
+                this.dubStart = 280; // "DUB" empieza a los 280ms
+                this.dubDur = 100; // "DUB" dura 100ms
+                // La pausa (diástole) ocurre en el tiempo restante (800 - 280 - 100 = 420ms)
+                
+                // Crear vectores de Three.js para optimizar (no crearlos en cada tick)
+                this.baseScaleVec = this.originalScale.clone();
+                // Vector para la escala "LUB"
+                this.lubScaleVec = this.originalScale.clone().multiplyScalar(this.data.lubScale);
+                // Vector para la escala "DUB"
+                this.dubScaleVec = this.originalScale.clone().multiplyScalar(this.data.dubScale);
+                
+                this.currentScaleVec = new THREE.Vector3(); // Vector temporal
+            },
+
+             tick: function (time) {
+                // Calcular en qué parte del ciclo de 800ms estamos
+                const timeInBeat = time % this.beatDuration;
+                
+                // Empezar con la escala base
+                let scale = this.baseScaleVec;
+
+                if (timeInBeat >= this.lubStart && timeInBeat < (this.lubStart + this.lubDur)) {
+                    // --- Estamos en la fase LUB ---
+                    // Progreso de 0.0 a 1.0
+                    const progress = (timeInBeat - this.lubStart) / this.lubDur;
+                    // Usamos Math.sin(prog * PI) para crear una curva 0 -> 1 -> 0
+                    const pump = Math.sin(progress * Math.PI);
+                    // Interpolar entre la escala base y la escala LUB
+                    this.currentScaleVec.lerpVectors(this.baseScaleVec, this.lubScaleVec, pump);
+                    scale = this.currentScaleVec;
+
+                } else if (timeInBeat >= this.dubStart && timeInBeat < (this.dubStart + this.dubDur)) {
+                    // --- Estamos en la fase DUB ---
+                    const progress = (timeInBeat - this.dubStart) / this.dubDur;
+                    const pump = Math.sin(progress * Math.PI);
+                    // Interpolar entre la escala base y la escala DUB
+                    this.currentScaleVec.lerpVectors(this.baseScaleVec, this.dubScaleVec, pump);
+                    scale = this.currentScaleVec;
+                }
+                // Si no estamos ni en LUB ni en DUB, 'scale' se queda como 'this.baseScaleVec' (la pausa)
+
+                // Aplicar la escala calculada
+                this.el.object3D.scale.set(scale.x, scale.y, scale.z);
+            }
+        });
+
+        // Componente para movimiento de ataque
+        AFRAME.registerComponent('attack-move', {
+            schema: {
+                startX: { type: 'number', default: -0.6 },
+                startY: { type: 'number', default: 0 },
+                startZ: { type: 'number', default: 0 },
+                rangeX: { type: 'number', default: 1.4 },
+                rangeY: { type: 'number', default: 0 },
+                rangeZ: { type: 'number', default: 0 },
+                speed: { type: 'number', default: 0.0015 },
+                rotationSpeed: { type: 'number', default: 0.02 }
+            },
+            init: function () {
+                // Offset de tiempo aleatorio para que no se sincronicen
+                this.timeOffset = Math.random() * 1000;
+            },
+            tick: function (time) {
+                const t = (time + this.timeOffset) * this.data.speed;
+                const movement = Math.sin(t) * 0.5 + 0.5;
+                
+                const x = this.data.startX + movement * this.data.rangeX;
+                const y = this.data.startY + movement * this.data.rangeY;
+                const z = this.data.startZ + movement * this.data.rangeZ;
+                
+                this.el.setAttribute('position', `${x} ${y} ${z}`);
+                this.el.object3D.rotation.y += this.data.rotationSpeed;
+            }
+        });
+
+        // Componente para movimiento flotante del virus
+        AFRAME.registerComponent('virus-float', {
+            schema: {
+                amplitude: { type: 'number', default: 0.003 },
+                speed: { type: 'number', default: 0.001 }
+            },
+            init: function () {
+                this.initialPosition = this.el.getAttribute('position');
+                this.timeOffset = Math.random() * 1000;
+            },
+            tick: function (time) {
+                const t = (time + this.timeOffset) * this.data.speed;
+                const floatY = Math.sin(t) * this.data.amplitude;
+                const floatX = Math.cos(t * 0.1) * this.data.amplitude * 0.2;
+                
+                this.el.setAttribute('position', {
+                    x: this.initialPosition.x + floatX,
+                    y: this.initialPosition.y + floatY,
+                    z: this.initialPosition.z
+                });
+            }
+        });
+
+        // Componente para animación idle del cuerpo (respiración y movimiento sutil)
+        AFRAME.registerComponent('body-idle', {
+            schema: {
+                breathingIntensity: { type: 'number', default: 0.002 }, // Mucho más sutil
+                breathingSpeed: { type: 'number', default: 0.8 }
+            },
+            init: function () {
+                this.time = Math.random() * 1000;
+                this.originalScale = null;
+                
+                this.el.addEventListener('model-loaded', () => {
+                    this.originalScale = this.el.getAttribute('scale');
+                    console.log('💃 Animación idle activada (solo respiración)');
+                });
+            },
+            tick: function (time, deltaTime) {
+                // Solo aplicar respiración muy sutil si el modelo está cargado
+                if (!this.originalScale) return;
+                
+                this.time += deltaTime;
+                const t = this.time / 1000;
+                
+                // Respiración MUY sutil (solo escala en Y)
+                const breathingOffset = Math.sin(t * this.data.breathingSpeed) * this.data.breathingIntensity;
+                const breathingScale = 1 + breathingOffset;
+                
+                // Solo modificar escala Y (respiración del pecho)
+                this.el.setAttribute('scale', {
+                    x: this.originalScale.x,
+                    y: this.originalScale.y * breathingScale,
+                    z: this.originalScale.z
+                });
+            }
+        });
+
+        // Componente para distorsión sutil del modelo (efecto orgánico)
+        AFRAME.registerComponent('body-distortion', {
+            schema: {
+                intensity: { type: 'number', default: 0.002 },
+                speed: { type: 'number', default: 0.3 }
+            },
+            init: function () {
+                this.time = Math.random() * 100;
+                this.meshes = [];
+                
+                // Esperar a que el modelo se cargue
+                this.el.addEventListener('model-loaded', () => {
+                    const mesh = this.el.getObject3D('mesh');
+                    if (mesh) {
+                        // Guardar todas las geometrías del modelo
+                        mesh.traverse((node) => {
+                            if (node.isMesh && node.geometry) {
+                                this.meshes.push({
+                                    mesh: node,
+                                    originalPositions: node.geometry.attributes.position.array.slice()
+                                });
+                            }
+                        });
+                        console.log('🌊 Distorsión de modelo activada:', this.meshes.length, 'meshes');
+                    }
+                });
+            },
+            tick: function (time, deltaTime) {
+                if (this.meshes.length === 0) return;
+                
+                this.time += deltaTime * this.data.speed;
+                const t = this.time / 1000;
+                
+                // Aplicar distorsión a cada mesh
+                this.meshes.forEach((item, meshIndex) => {
+                    const positions = item.mesh.geometry.attributes.position;
+                    const originalPositions = item.originalPositions;
+                    
+                    // Distorsionar cada vértice
+                    for (let i = 0; i < positions.count; i++) {
+                        const i3 = i * 3;
+                        
+                        // Obtener posición original
+                        const x = originalPositions[i3];
+                        const y = originalPositions[i3 + 1];
+                        const z = originalPositions[i3 + 2];
+                        
+                        // Calcular distorsión basada en posición y tiempo
+                        const distortionX = Math.sin(t + y * 2 + meshIndex) * this.data.intensity;
+                        const distortionY = Math.cos(t * 1.3 + x * 2 + meshIndex) * this.data.intensity;
+                        const distortionZ = Math.sin(t * 0.7 + x + y + meshIndex) * this.data.intensity;
+                        
+                        // Aplicar distorsión
+                        positions.array[i3] = x + distortionX;
+                        positions.array[i3 + 1] = y + distortionY;
+                        positions.array[i3 + 2] = z + distortionZ;
+                    }
+                    
+                    // Marcar para actualización
+                    positions.needsUpdate = true;
+                });
+            }
+        });
+
+        // Componente para que el texto siempre mire a la cámara
+        AFRAME.registerComponent('look-at-camera', {
+            init: function () {
+                this.camera = null;
+            },
+            tick: function () {
+                if (!this.camera) {
+                    this.camera = document.querySelector('[camera]');
+                    if (!this.camera) return;
+                }
+                
+                // Obtener posición de la cámara
+                const cameraPos = this.camera.object3D.getWorldPosition(new THREE.Vector3());
+                
+                // Hacer que el texto mire a la cámara
+                this.el.object3D.lookAt(cameraPos);
+            }
+        });
+
+        // Componente para mostrar flecha después del audio
+        AFRAME.registerComponent('arrow-guide', {
+            schema: {
+                arrowNumber: { type: 'number', default: 1 }, // Número de flecha (1, 2 o 3)
+                delay: { type: 'number', default: 2000 } // Delay después del audio
+            },
+            init: function () {
+                this.arrow = null;
+                this.audioComponent = this.el.components['gaze-audio'];
+                
+                // Configuración de cada flecha según el número
+                this.arrowConfigs = {
+                    1: { // Respiratorio → Circulatorio
+                        position: '5.5 1.6 -4',
+                        rotation: '0 90 90',
+                        worldPosition: true
+                    },
+                    2: { // Circulatorio → Inmunológico
+                        position: '4 1.6 4',
+                        rotation: '0 -45 90',
+                        worldPosition: true
+                    },
+                    3: { // Inmunológico → Final (izquierda)
+                        position: '-4 2.5 6',
+                        rotation: '0 200 90',
+                        worldPosition: true
+                    }
+                };
+                
+                // Escuchar cuando termina el audio
+                if (this.audioComponent) {
+                    const audio = this.audioComponent.audio;
+                    audio.addEventListener('ended', () => {
+                        setTimeout(() => {
+                            this.showArrow();
+                        }, this.data.delay);
+                    });
+                }
+            },
+            showArrow: function () {
+                if (this.arrow) return; // Ya existe
+                
+                const config = this.arrowConfigs[this.data.arrowNumber];
+                if (!config) {
+                    console.error('❌ Número de flecha inválido:', this.data.arrowNumber);
+                    return;
+                }
+                
+                console.log(`➡️ Mostrando flecha guía #${this.data.arrowNumber}`);
+                
+                // Crear flecha en posición absoluta del mundo
+                this.arrow = document.createElement('a-entity');
+                this.arrow.setAttribute('gltf-model', './models/arrow.glb');
+                this.arrow.setAttribute('scale', '0.5 0.5 0.5');
+                this.arrow.setAttribute('position', config.position);
+                this.arrow.setAttribute('rotation', config.rotation);
+                
+                // Animación de flotación vertical
+                const floatPos = config.position.split(' ');
+                floatPos[1] = parseFloat(floatPos[1]) + 0.3; // Subir 0.3 unidades
+                this.arrow.setAttribute('animation__float', {
+                    property: 'position',
+                    to: floatPos.join(' '),
+                    dur: 1500,
+                    dir: 'alternate',
+                    loop: true,
+                    easing: 'easeInOutSine'
+                });
+                
+                // Animación de pulso
+                this.arrow.setAttribute('animation__pulse', {
+                    property: 'scale',
+                    to: '0.6 0.6 0.6',
+                    dur: 1000,
+                    dir: 'alternate',
+                    loop: true,
+                    easing: 'easeInOutSine'
+                });
+                
+                // Color brillante para visibilidad
+                this.arrow.setAttribute('material', 'color: #FFD700; emissive: #FFA500; emissiveIntensity: 0.5');
+                
+                // Agregar a la escena (no al elemento actual)
+                document.querySelector('a-scene').appendChild(this.arrow);
+                
+                // Auto-ocultar después de 2 segundos (cuando ya apunta al nuevo sistema)
+                setTimeout(() => {
+                    if (this.arrow) {
+                        // Animación de escala hacia 0 (se hace pequeña y desaparece)
+                        this.arrow.setAttribute('animation__shrink', {
+                            property: 'scale',
+                            to: '0 0 0',
+                            dur: 800,
+                            easing: 'easeInQuad'
+                        });
+                        
+                        setTimeout(() => {
+                            if (this.arrow) {
+                                this.arrow.remove();
+                                this.arrow = null;
+                            }
+                        }, 800);
+                    }
+                }, 2000);
+                
+                // Mostrar el siguiente sistema cuando aparece la flecha
+                this.revealNextSystem();
+            },
+            revealNextSystem: function () {
+                const systemTransitions = {
+                    1: { 
+                        hide: 'sistema-respiratorio',
+                        show: 'sistema-circulatorio'
+                    },
+                    2: { 
+                        hide: 'sistema-circulatorio',
+                        show: 'sistema-inmunologico'
+                    },
+                    3: { 
+                        hide: 'sistema-inmunologico',
+                        show: 'sistema-final'
+                    }
+                };
+                
+                const transition = systemTransitions[this.data.arrowNumber];
+                if (transition) {
+                    // Ocultar el sistema anterior con animación
+                    const prevSystem = document.getElementById(transition.hide);
+                    if (prevSystem) {
+                        console.log(`👋 Ocultando sistema: ${transition.hide}`);
+                        
+                        // Todos los sistemas usan scale para ocultarse
+                        prevSystem.setAttribute('animation__hide', {
+                            property: 'scale',
+                            to: '0 0 0',
+                            dur: 800,
+                            easing: 'easeInQuad'
+                        });
+                        
+                        // Hacer invisible después de la animación
+                        setTimeout(() => {
+                            prevSystem.setAttribute('visible', 'false');
+                        }, 800);
+                    }
+                    
+                    // Mostrar el siguiente sistema con animación (con un pequeño delay)
+                    setTimeout(() => {
+                        const nextSystem = document.getElementById(transition.show);
+                        if (nextSystem) {
+                            console.log(`✨ Revelando sistema: ${transition.show}`);
+                            nextSystem.setAttribute('visible', 'true');
+                            
+                            // Para sistemas que NO son circulatorio, usar scale
+                            if (transition.show !== 'sistema-circulatorio') {
+                                nextSystem.setAttribute('animation__show', {
+                                    property: 'scale',
+                                    from: '0 0 0',
+                                    to: '1 1 1',
+                                    dur: 1500,
+                                    easing: 'easeOutElastic'
+                                });
+                            }
+                            
+                            // 🌈 CAMBIAR COLOR DEL CIELO SEGÚN EL SISTEMA
+                            const sky = document.querySelector('#dynamic-sky');
+                            const skyColors = {
+                                'sistema-respiratorio': '#2a1a0a',
+                                'sistema-circulatorio': '#4a0e1a',
+                                'sistema-inmunologico': '#0a1a3a',
+                                'sistema-final': '#1a0a2e'
+                            };
+                            
+                            if (sky && skyColors[transition.show]) {
+                                console.log(`🌈 CAMBIANDO CIELO A: ${skyColors[transition.show]}`);
+                                sky.setAttribute('animation', 
+                                    `property: material.color; to: ${skyColors[transition.show]}; dur: 2000; easing: easeInOutSine`
+                                );
+                            }
+                            
+                            // 🎵 CAMBIAR SONIDO AMBIENTAL SEGÚN EL SISTEMA
+                            const breathingSound = document.getElementById('breathing-sound');
+                            const heartbeatSound = document.getElementById('heartbeat-sound');
+                            const battleSound = document.getElementById('battle-sound');
+                            
+                            // Detener todos los sonidos
+                            if (breathingSound) breathingSound.pause();
+                            if (heartbeatSound) heartbeatSound.pause();
+                            if (battleSound) battleSound.pause();
+                            
+                            // Reproducir el sonido del sistema actual
+                            if (transition.show === 'sistema-respiratorio' && breathingSound) {
+                                breathingSound.volume = 0.15; // Volumen bajo
+                                breathingSound.currentTime = 0;
+                                breathingSound.play().catch(e => console.log('Error reproduciendo respiración:', e));
+                                console.log('🫁 Sonido de respiración activado');
+                            } else if (transition.show === 'sistema-circulatorio' && heartbeatSound) {
+                                heartbeatSound.volume = 0.9; // Un poco más alto
+                                heartbeatSound.currentTime = 0;
+                                heartbeatSound.play().catch(e => console.log('Error reproduciendo latidos:', e));
+                                console.log('❤️ Sonido de latidos activado');
+                            } else if (transition.show === 'sistema-inmunologico' && battleSound) {
+                                battleSound.volume = 0.18;
+                                battleSound.currentTime = 0;
+                                battleSound.play().catch(e => console.log('Error reproduciendo batalla:', e));
+                                console.log('🛡️ Sonido de batalla activado');
+                            }
+                        }
+                    }, 400); // Pequeño delay para transición suave
+                }
+            }
+        });
+
+        // Componente para controlar toda la secuencia final
+        AFRAME.registerComponent('final-sequence-controller', {
+            init: function () {
+                this.sequenceStarted = false; // Bandera para evitar reproducción múltiple
+                this.audioComponent = this.el.components['gaze-audio'];
+                
+                if (this.audioComponent) {
+                    const audio = this.audioComponent.audio;
+                    
+                    // Cuando empieza el audio final1
+                    audio.addEventListener('play', () => {
+                        // Evitar que se reproduzca múltiples veces
+                        if (this.sequenceStarted) {
+                            console.log('⚠️ Secuencia ya iniciada, ignorando...');
+                            audio.pause();
+                            return;
+                        }
+                        
+                        this.sequenceStarted = true;
+                        console.log('🌍 Iniciando secuencia final con final1.mp3');
+                        
+                        // Mostrar el planeta
+                        const planet = document.getElementById('planet-earth');
+                        if (planet) {
+                            planet.setAttribute('visible', 'true');
+                            planet.setAttribute('animation__appear', {
+                                property: 'scale',
+                                from: '0 0 0',
+                                to: '0.8 0.8 0.8',
+                                dur: 1500,
+                                easing: 'easeOutElastic'
+                            });
+                        }
+                    });
+                    
+                    // Cuando TERMINA el audio final1, esperar 3 segundos y reproducir final2
+                    audio.addEventListener('ended', () => {
+                        console.log('⏱️ final1.mp3 terminó, haciendo desaparecer la tierra y agrandando human.glb...');
+                        
+                        const planet = document.getElementById('planet-earth');
+                        const maleModel = document.getElementById('male-model');
+                        
+                        // Hacer desaparecer la tierra
+                        if (planet) {
+                            planet.setAttribute('animation__disappear', {
+                                property: 'scale',
+                                to: '0 0 0',
+                                dur: 1000,
+                                easing: 'easeInQuad'
+                            });
+                            setTimeout(() => {
+                                planet.setAttribute('visible', 'false');
+                            }, 1000);
+                        }
+                        
+                        // Hacer crecer human.glb para llamar la atención (de 0.5 a 0.8)
+                        if (maleModel) {
+                            maleModel.setAttribute('animation__grow', {
+                                property: 'scale',
+                                from: '0.5 0.5 0.5',
+                                to: '0.8 0.8 0.8',
+                                dur: 1500,
+                                easing: 'easeOutElastic'
+                            });
+                        }
+                        
+                        // Después de 3 segundos de que terminó final1, reproducir final2
+                        setTimeout(() => {
+                            console.log('🎵 Reproduciendo final2.mp3');
+                            
+                            // Reproducir final2.mp3
+                            const final2Audio = document.getElementById('final2-audio');
+                            if (final2Audio) {
+                                final2Audio.currentTime = 0;
+                                final2Audio.play().catch(e => console.log('Error reproduciendo final2:', e));
+                            }
+                            
+                            // Cuando termina final2, ocultar male.glb y mostrar mensaje de fin
+                            final2Audio.addEventListener('ended', () => {
+                                console.log('✅ final2.mp3 terminó, ocultando human.glb y mostrando mensaje');
+                                
+                                const maleModel = document.getElementById('male-model');
+                                
+                                // Ocultar male.glb
+                                if (maleModel) {
+                                    maleModel.setAttribute('animation__disappear', {
+                                        property: 'scale',
+                                        to: '0 0 0',
+                                        dur: 800,
+                                        easing: 'easeInQuad'
+                                    });
+                                    setTimeout(() => {
+                                        maleModel.setAttribute('visible', 'false');
+                                    }, 800);
+                                }
+                                
+                                // Mostrar mensaje final después de que desaparezcan los modelos
+                                setTimeout(() => {
+                                    console.log('📋 Mostrando mensaje final');
+                                    const endScreen = document.getElementById('end-screen');
+                                    if (endScreen) {
+                                        endScreen.setAttribute('visible', 'true');
+                                        // Animación de aparición con escala
+                                        endScreen.setAttribute('animation__appear', {
+                                            property: 'scale',
+                                            from: '0 0 0',
+                                            to: '1 1 1',
+                                            dur: 1000,
+                                            easing: 'easeOutElastic'
+                                        });
+                                    }
+                                }, 800);
+                            });
+
+                        }, 3000); // 3 segundos después de que terminó final1
+                    });
+                }
+            }
+        });
+
+        // Componente para el botón de reinicio
+        AFRAME.registerComponent('restart-handler', {
+            init: function () {
+                this.el.addEventListener('click', () => {
+                    console.log('🔄 Reiniciando experiencia...');
+                    // Recargar la página
+                    window.location.reload();
+                });
+                
+                // Efecto hover en VR
+                this.el.addEventListener('mouseenter', () => {
+                    this.el.setAttribute('color', '#66bb6a'); // Verde más claro
+                    this.el.setAttribute('scale', '1.1 1.1 1.1');
+                });
+                
+                this.el.addEventListener('mouseleave', () => {
+                    this.el.setAttribute('color', '#4CAF50'); // Verde original
+                    this.el.setAttribute('scale', '1 1 1');
+                });
+            }
+        });
+
+        // Componente para dar color al modelo humano
+        AFRAME.registerComponent('human-skin', {
+            init: function () {
+                this.el.addEventListener('model-loaded', () => {
+                    const mesh = this.el.getObject3D('mesh');
+                    if (mesh) {
+                        mesh.traverse((node) => {
+                            if (node.isMesh) {
+                                // Aplicar un color de piel realista
+                                node.material.color.setHex(0xffd0a0); // Color piel suave
+                                node.material.roughness = 0.7; // Menos brilloso
+                                node.material.metalness = 0.1; // No metálico
+                                node.material.needsUpdate = true;
+                                
+                                console.log('🎨 Material aplicado a:', node.name);
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    </script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+        
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 24px;
+            text-align: center;
+            z-index: 1000;
+            font-family: Arial, sans-serif;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px 40px;
+            border-radius: 10px;
+        }
+        
+        #startButton {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px 40px;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 2000;
+            font-family: Arial, sans-serif;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+            transition: all 0.3s;
+        }
+        
+        #startButton:hover {
+            transform: translate(-50%, -50%) scale(1.05);
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.6);
+        }
+        
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            text-align: center;
+            z-index: 100;
+            font-family: Arial, sans-serif;
+        }
+        
+        #muteButton {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #fff;
+            border-radius: 50%;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            font-family: Arial, sans-serif;
+        }
+        
+        #muteButton:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+        
+        #muteButton.muted {
+            background: rgba(255, 0, 0, 0.7);
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">
+        <div>Cargando Experiencia VR...</div>
+        <div style="font-size: 14px; margin-top: 10px;">🫁 🫀 🛡️</div>
+    </div>
+    
+    <button id="startButton" class="hidden">
+        🎮 COMENZAR EXPERIENCIA VR
+    </button>
+    
+    <button id="muteButton" class="hidden" title="Silenciar/Activar música">
+        🔊
+    </button>
+    
+    <div id="instructions" class="hidden">
+        👁️ Mira cada sistema por 1.5 segundos para escuchar su descripción
+    </div>
+
+    <a-scene loading-screen="enabled: false" vr-mode-ui="enabled: true">
+   <script>
+    AFRAME.registerComponent('first-person-body', {
+        schema: {
+            // Offset de posición (como antes)
+            positionOffset: { type: 'vec3', default: { x: 0, y: -0.5, z: 0.8 } },
+            
+            // ✅ NUEVO: Offset de rotación en GRADOS
+            // El valor 'y: 180' es el ajuste de 180 grados que teníamos antes (Math.PI)
+            rotationOffset: { type: 'vec3', default: { x: 0, y: 90, z: 0 } }
+        },
+        
+        init: function () {
+            if (this.el.parentEl.tagName === 'A-CAMERA') {
+                console.warn('¡El cuerpo no debe ser hijo de la cámara! Mover al <a-scene> para que funcione correctamente.');
+            }
+            
+            // Convertimos los grados a radianes para que Three.js los entienda
+            // Lo hacemos en 'init' para no calcularlo en cada 'tick'
+            this.rotationOffsetRad = {
+                x: THREE.MathUtils.degToRad(this.data.rotationOffset.x),
+                y: THREE.MathUtils.degToRad(this.data.rotationOffset.y),
+                z: THREE.MathUtils.degToRad(this.data.rotationOffset.z)
+            };
+        },
+        
+        tick: function () {
+            const camera = this.el.sceneEl.camera.el;
+            if (!camera) return;
+
+            const cameraPos = camera.object3D.position;
+            const cameraRot = camera.object3D.rotation; // Rotación de la cámara en radianes
+            const data = this.data;
+
+            // --- 1. POSICIÓN (Sin cambios) ---
+            const tempCameraPos = new THREE.Vector3();
+            camera.object3D.getWorldPosition(tempCameraPos);
+            
+            const offsetVector = new THREE.Vector3(data.positionOffset.x, data.positionOffset.y, data.positionOffset.z);
+            
+            const cameraQuaternion = new THREE.Quaternion();
+            camera.object3D.getWorldQuaternion(cameraQuaternion);
+            offsetVector.applyQuaternion(cameraQuaternion);
+
+            this.el.object3D.position.set(
+                tempCameraPos.x + offsetVector.x,
+                0 + data.positionOffset.y, 
+                tempCameraPos.z + offsetVector.z
+            );
+
+            // --- 2. ROTACIÓN (Actualizado) ---
+            // Aplicamos la rotación Y de la cámara MÁS nuestro offset en Y.
+            // Los offsets X y Z se aplican fijos (para inclinaciones).
+            this.el.object3D.rotation.set(
+                this.rotationOffsetRad.x, // Inclinación fija (adelante/atrás)
+                cameraRot.y + this.rotationOffsetRad.y, // Sigue la cámara + tu offset
+                this.rotationOffsetRad.z  // Inclinación fija (lados)
+            );
+        }
+    });
+</script>
+        <script>
+AFRAME.registerComponent('auto-scale', {
+  schema: {
+    size: { type: 'number', default: 1 } // tamaño final deseado
+  },
+  init: function () {
+    const el = this.el;
+    el.addEventListener('model-loaded', () => {
+      const obj = el.getObject3D('mesh');
+      if (!obj) return;
+
+      // 🧭 Calcular el tamaño real del modelo
+      const box = new THREE.Box3().setFromObject(obj);
+      const size = new THREE.Vector3();
+      box.getSize(size);
+      const maxDim = Math.max(size.x, size.y, size.z);
+
+      // ⚖️ Evitar divisiones por 0 o escalas excesivas
+      if (maxDim > 0) {
+        // Este factor controla cuánto se agranda o encoge el modelo
+        const scaleFactor = this.data.size / maxDim;
+
+        // 🪄 Limitar el factor para que nunca desaparezca ni se vuelva gigante
+        const safeScale = Math.min(Math.max(scaleFactor, 0.01), 10);
+
+        obj.scale.setScalar(safeScale);
+        console.log(`Auto-scale aplicado: ${safeScale.toFixed(4)}`);
+      } else {
+        console.warn('El modelo parece no tener dimensiones visibles:', el);
+      }
+    });
+  }
+});
+</script>
+
+        <!-- Cámara con cursor de mirada -->
+        <a-camera position="0 1.6 3">
+            <!-- Modelo del cuerpo del usuario en primera persona -->
+            <!-- Posicionado ligeramente hacia abajo y adelante para que sea visible al mirar abajo -->
+            
+
+
+
+
+            
+            <!-- Cursor/Reticle para interacción con mirada -->
+            <a-cursor
+                id="cursor"
+                color="#ffffff"
+                opacity="0.8"
+                fuse="true"
+                fuse-timeout="1500"
+                raycaster="objects: .interactive; far: 20; interval: 100"
+                cursor-debug
+            >
+                <!-- Anillo de progreso -->
+                <a-ring
+                    color="#00ff00"
+                    radius-inner="0.012"
+                    radius-outer="0.016"
+                    opacity="0"
+                    animation__fuse="property: geometry.thetaLength; from: 0; to: 360; dur: 1500; easing: linear; startEvents: fusing"
+                    animation__fuseopacity="property: opacity; from: 0; to: 1; dur: 1500; easing: linear; startEvents: fusing"
+                    animation__reset="property: geometry.thetaLength; to: 0; dur: 1; startEvents: mouseleave"
+                    animation__resetopacity="property: opacity; to: 0; dur: 1; startEvents: mouseleave"
+                ></a-ring>
+            </a-cursor>
+        </a-camera>
+
+       <!-- <a-entity 
+  gltf-model="./models/person.glb"
+  scale="1 1 1 "
+  first-person-body
+  body-idle="breathingIntensity: 0.0002; breathingSpeed: 0.006"
+  body-distortion="intensity: 0.0005; speed: 0.05"
+></a-entity> -->
+        <!-- Luces -->
+        <a-light type="ambient" intensity="0.5"></a-light>
+        <a-light type="directional" position="5 10 7" intensity="1.5"></a-light>
+        
+        <!-- Luces de acento para cada sistema -->
+        <a-light type="point" color="#4CAF50" intensity="3" distance="15" position="0 1.6 -8"></a-light>
+        <a-light type="point" color="#F44336" intensity="3" distance="15" position="8 1.6 0"></a-light>
+        <a-light type="point" color="#2196F3" intensity="3" distance="15" position="0 1.6 8"></a-light>
+
+        <!-- Cielo dinámico que cambia según el sistema -->
+        <a-sky 
+            id="dynamic-sky" 
+            color="#2a1a0a"
+        ></a-sky>
+        
+        <!-- Glóbulos rojos flotantes (en vez de estrellas) -->
+        <a-entity id="blood-cells" position="0 0 0"></a-entity>
+
+        <!-- Suelo tipo tejido orgánico - SEMI-TRANSPARENTE -->
+        <a-circle 
+            position="0 0 0" 
+            rotation="-90 0 0" 
+            radius="20" 
+            color="#7d2e41"
+            shadow
+            material="transparent: true; opacity: 0.4; roughness: 0.8; side: double"
+        ></a-circle>
+
+        <!-- SISTEMA RESPIRATORIO (Frente) - VISIBLE AL INICIO -->
+        <a-entity id="sistema-respiratorio" position="0 1.6 -8" visible="true">
+            <!-- Pulmón Derecho -->
+            <a-entity 
+                gltf-model="./models/lungs.glb" 
+                scale="3 3 3" 
+                position="0 -4.5 2"
+                breathing="amplitude: 0.08; speed: 0.0008"
+            ></a-entity>
+            
+            
+            <!-- Colisionador invisible INTERACTIVO - AQUÍ SE DETECTA -->
+            <a-sphere 
+                position="0 -1.5 3"
+                radius="3" 
+                class="interactive"
+                data-name="Sistema Respiratorio"
+                gaze-audio="src: ./audio/respiratorio.mp3; duration: 1.5"
+                arrow-guide="arrowNumber: 1; delay: 2000"
+                material="transparent: true; opacity: 0; color: #4CAF50"
+                visible="true"
+            ></a-sphere>
+            
+            <!-- Texto -->
+            <a-text 
+                value="Sistema Respiratorio" 
+                align="center" 
+                position="0 3.5 6" 
+                color="#4CAF50"
+                width="10"
+                font="exo2bold"
+                shader="msdf"
+                negate="false"
+                look-at-camera
+            ></a-text>
+        </a-entity>
+
+        <!-- SISTEMA CIRCULATORIO (Derecha) - OCULTO AL INICIO -->
+        <a-entity id="sistema-circulatorio" position="8 1.6 0" visible="false">
+            <!-- Corazón -->
+            <a-entity 
+  gltf-model="./models/Heart.glb" 
+  auto-scale="size:4.5"
+  position="-3 -0.5 2"
+  rotation="150 -320 180"
+  heartbeat="bpm: 90; lubScale: 1.4; dubScale: 1.2" ></a-entity>
+
+            <!-- Colisionador invisible INTERACTIVO - AQUÍ SE DETECTA -->
+            <a-sphere 
+                position="-3 -0.5 2"
+                radius="3" 
+                class="interactive"
+                data-name="Sistema Circulatorio"
+                gaze-audio="src: ./audio/circulatorio.mp3; duration: 1.5"
+                arrow-guide="arrowNumber: 2; delay: 2000"
+                material="transparent: true; opacity: 0; color: #F44336"
+                visible="true"
+            ></a-sphere>
+            
+            <!-- Texto -->
+            <a-text 
+                value="Sistema Circulatorio" 
+                align="center" 
+                position="-3 4.5 2" 
+                color="#F44336"
+                width="10"
+                font="exo2bold"
+                shader="msdf"
+                negate="false"
+                look-at-camera
+            ></a-text>
+        </a-entity>
+
+        <!-- SISTEMA INMUNOLÓGICO (Atrás) - OCULTO AL INICIO -->
+        <a-entity id="sistema-inmunologico" position="0 1.6 8" visible="false" scale="0 0 0">
+            <!-- Glóbulos Blancos con diferentes movimientos -->
+            <a-entity 
+                gltf-model="./models/Cell.glb" 
+                scale="0.08 0.08 0.08" 
+                attack-move="startX: 2; startY: 0.2; startZ: 0; rangeX: 1.5; rangeY: 0.3; speed: 0.0015; rotationSpeed: 0.02"
+            ></a-entity>
+            <a-entity 
+                gltf-model="./models/Cell.glb" 
+                scale="0.08 0.08 0.08" 
+                attack-move="startX: -1.5; startY: 3.5; startZ: 1; rangeX: 1.2; rangeZ: 0.5; speed: 0.0012; rotationSpeed: -0.015"
+            ></a-entity>
+            <a-entity 
+                gltf-model="./models/Cell.glb" 
+                scale="0.08 0.08 0.08" 
+                attack-move="startX: 0.7; startY: -1; startZ: -0.5; rangeX: 1.0; rangeY: 0.4; speed: 0.0018; rotationSpeed: 0.025"
+            ></a-entity>
+            <a-entity 
+                gltf-model="./models/Cell.glb" 
+                scale="0.08 0.08 0.08" 
+                attack-move="startX: -3; startY: 0.5; startZ: 0.5; rangeX: 1.8; rangeY: 0.2; rangeZ: 0.3; speed: 0.0010; rotationSpeed: 0.018"
+            ></a-entity>
+            
+            <!-- Virus con movimiento flotante SUTIL (idle) -->
+            <a-entity 
+                gltf-model="./models/Virus.glb" 
+                scale="0.08 0.08 0.08" 
+                position="-1 -0.5 1"
+                virus-float="amplitude: 0.003; speed: 0.0004"
+                animation="property: rotation; to: 0 -360 0; loop: true; dur: 15000; easing: linear"
+            ></a-entity>
+            <a-entity 
+                gltf-model="./models/Virus.glb" 
+                scale="0.08 0.08 0.08" 
+                position="-1 1 1"
+                virus-float="amplitude: 0.005; speed: 0.0006"
+                animation="property: rotation; to: 0 360 0; loop: true; dur: 12000; easing: linear"
+            ></a-entity>
+            <a-entity 
+                gltf-model="./models/Virus.glb" 
+                scale="0.08 0.08 0.08" 
+                position="-3 -0.5 1"
+                virus-float="amplitude: 0.006; speed: 0.0007"
+                animation="property: rotation; to: 0 -360 0; loop: true; dur: 18000; easing: linear"
+            ></a-entity>
+            <a-entity 
+                gltf-model="./models/Virus.glb" 
+                scale="0.08 0.08 0.08" 
+                position="-4 1.5 1"
+                virus-float="amplitude: 0.006; speed: 0.0007"
+                animation="property: rotation; to: 0 -360 0; loop: true; dur: 18000; easing: linear"
+            ></a-entity>
+            
+            <!-- Colisionador invisible INTERACTIVO - EN EL CENTRO DEL SISTEMA -->
+            <a-sphere 
+                position="-4 0 2 "
+                radius="6" 
+                class="interactive"
+                data-name="Sistema Inmunológico"
+                gaze-audio="src: ./audio/inmuno.mp3; duration: 1.5"
+                arrow-guide="arrowNumber: 3; delay: 2000"
+                material="transparent: true; opacity: 0; color: #2196F3"
+                visible="true"
+            ></a-sphere>
+            
+            <!-- Texto -->
+            <a-text 
+                value="Sistema Inmunologico" 
+                align="center" 
+                position="0 7.5 0" 
+                color="#2196F3"
+                width="10"
+                font="exo2bold"
+                shader="msdf"
+                negate="false"
+                look-at-camera
+            ></a-text>
+        </a-entity>
+
+        <!-- SISTEMA FINAL - CUERPO COMPLETO (Izquierda) - OCULTO AL INICIO -->
+        <a-entity id="sistema-final" position="-8 1.6 4" visible="false" scale="0 0 0">
+            <!-- Modelo del cuerpo masculino con rotación (male.glb) -->
+            <a-entity 
+                id="male-model"
+                gltf-model="./models/male.glb" 
+                scale="0.5 0.5 0.5" 
+                position="1.5 -1.5 0"
+                rotation="0 90 0"
+                animation="property: rotation; to: 0 450 0; loop: true; dur: 20000; easing: linear"
+                human-skin
+            ></a-entity>
+            
+            <!-- Luces para iluminar el human.glb y ver las texturas -->
+            <a-light type="point" intensity="1.5" color="#ffeecc" position="1.5 2 2"></a-light>
+            <a-light type="point" intensity="1.2" color="#ffeecc" position="1.5 -1 2"></a-light>
+            <a-light type="point" intensity="1" color="#ccddff" position="3 0 0"></a-light>
+            
+            <!-- Planeta Tierra (aparece con final1, desaparece con final2) -->
+            <a-entity 
+                id="planet-earth"
+                gltf-model="./models/planet.glb" 
+                scale="6 6 6" 
+                position="6 0 1"
+                rotation="0 0 0"
+                visible="false"
+                animation="property: rotation; to: 0 360 0; loop: true; dur: 30000; easing: linear"
+            ></a-entity>
+            
+            <!-- UN SOLO Colisionador invisible INTERACTIVO para final1 -->
+            <a-sphere 
+                position="0 0 2"
+                radius="5" 
+                class="interactive"
+                data-name="Sistema Final"
+                gaze-audio="src: ./audio/final1.mp3; duration: 1.5"
+                final-sequence-controller
+                arrow-guide="arrowNumber: 4; delay: 2000"
+                material="transparent: true; opacity: 0; color: #FFA500"
+                visible="true"
+            ></a-sphere>
+            
+            
+            <!-- PANTALLA FINAL - Mensaje de fin y botón de reinicio (en la posición central entre male.glb y planet.glb) -->
+            <a-entity rotation="0 130 0" id="end-screen" position="6 0 0.5" visible="false" look-at="[camera]">
+                
+            <!-- Panel de fondo -->
+            <a-plane 
+                width="6" 
+                height="4" 
+                color="#000000" 
+                opacity="0.9"
+            ></a-plane>
+            
+            <!-- Texto de fin -->
+            <a-text 
+                value="¡Experiencia Completada!" 
+                align="center" 
+                position="0 1 0.1" 
+                color="#00ff00"
+                width="5"
+                font="exo2bold"
+                shader="msdf"
+                negate="false"
+            ></a-text>
+            
+            <a-text 
+                value="Gracias por explorar el cuerpo humano" 
+                align="center" 
+                position="0 0.3 0.1" 
+                color="#ffffff"
+                width="4.5"
+                font="exo2bold"
+                shader="msdf"
+                negate="false"
+            ></a-text>
+            
+            <!-- Botón de reinicio interactivo en VR -->
+            <a-plane 
+                width="3" 
+                height="0.7" 
+                position="0 -0.6 0.1" 
+                color="#4CAF50"
+                class="interactive"
+                data-name="Reiniciar"
+                id="restart-button"
+                restart-handler
+            >
+                <a-text 
+                    value="🔄 Reiniciar Experiencia" 
+                    align="center" 
+                    position="0 0 0.01" 
+                    color="#ffffff"
+                    width="4.2"
+                    font="exo2bold"
+                    shader="msdf"
+                    negate="false"
+                ></a-text>
+            </a-plane>
+            </a-entity>
+        </a-entity>
+        
+        <!-- Sonidos del sistema -->
+        <!-- Música de fondo ambiente -->
+        <audio id="backgroundMusic" loop preload="auto" style="display: none;">
+            <source src="./audio/music.mp3" type="audio/mpeg">
+            <!-- Puedes añadir más formatos para compatibilidad -->
+            <source src="./audio/background.ogg" type="audio/ogg">
+        </audio>
+        
+        <!-- Sonido de click/selección -->
+        <audio id="clickSound" preload="auto" style="display: none;">
+            <source src="./audio/click.wav" type="audio/wav">
+
+        </audio>
+        
+        <!-- Audio final2 para reproducción automática -->
+        <audio id="final2-audio" preload="auto" style="display: none;">
+            <source src="./audio/final2.mp3" type="audio/mpeg">
+        </audio>
+        
+        <!-- Sonidos ambientales para cada sistema -->
+        <audio id="breathing-sound" loop preload="auto" style="display: none;">
+            <source src="./audio/breathing.mp3" type="audio/mpeg">
+        </audio>
+        
+        <audio id="heartbeat-sound" loop preload="auto" style="display: none;">
+            <source src="./audio/heartbeat.mp3" type="audio/mpeg">
+        </audio>
+        
+        <audio id="battle-sound" loop preload="auto" style="display: none;">
+            <source src="./audio/battle.mp3" type="audio/mpeg">
+        </audio>
+    </a-scene>
+
+    <script>
+        // Generar glóbulos rojos flotantes (en vez de estrellas)
+        const bloodCellsEl = document.querySelector('#blood-cells');
+        
+        // Total de 150 glóbulos: 100 arriba + 50 abajo
+        for (let i = 0; i < 150; i++) {
+            const cell = document.createElement('a-entity');
+            
+            // Posición aleatoria en el espacio
+            const x = (Math.random() - 0.5) * 80;
+            const z = (Math.random() - 0.5) * 80;
+            
+            // Los primeros 100 van arriba, los últimos 50 van abajo del suelo
+            let y;
+            if (i < 100) {
+                y = Math.random() * 40 + 5; // Arriba: entre 5 y 45
+            } else {
+                y = Math.random() * -15 - 2; // Abajo: entre -2 y -17
+            }
+            
+            cell.setAttribute('gltf-model', './models/redcell.glb');
+            cell.setAttribute('position', `${x} ${y} ${z}`);
+            cell.setAttribute('scale', '3 3 3');
+            
+            // Rotación aleatoria inicial
+            const rotX = Math.random() * 360;
+            const rotY = Math.random() * 360;
+            const rotZ = Math.random() * 360;
+            cell.setAttribute('rotation', `${rotX} ${rotY} ${rotZ}`);
+            
+            // Animación de rotación lenta
+            const duration = 8000 + Math.random() * 4000; // Entre 8-12 segundos
+            cell.setAttribute('animation', {
+                property: 'rotation',
+                to: `${rotX + 360} ${rotY + 360} ${rotZ}`,
+                dur: duration,
+                loop: true,
+                easing: 'linear'
+            });
+            
+            // Animación de flotación vertical
+            const floatDuration = 6000 + Math.random() * 4000;
+            const floatAmount = 2 + Math.random() * 2;
+            cell.setAttribute('animation__float', {
+                property: 'position',
+                to: `${x} ${y + floatAmount} ${z}`,
+                dur: floatDuration,
+                dir: 'alternate',
+                loop: true,
+                easing: 'easeInOutSine'
+            });
+            
+            bloodCellsEl.appendChild(cell);
+        }
+        
+        // Manejar el botón de inicio
+        const startButton = document.getElementById('startButton');
+        const muteButton = document.getElementById('muteButton');
+        const instructions = document.getElementById('instructions');
+        const loading = document.getElementById('loading');
+        
+        // Mostrar botón cuando la escena esté cargada
+        document.querySelector('a-scene').addEventListener('loaded', () => {
+            setTimeout(() => {
+                loading.classList.add('hidden');
+                startButton.classList.remove('hidden');
+                console.log('✅ Escena cargada - Presiona el botón para habilitar audio');
+            }, 1000);
+        });
+        
+        // Al hacer click en el botón de inicio
+        startButton.addEventListener('click', async () => {
+            console.log('🎮 Usuario interactuó - Audio habilitado y entrando en VR');
+            console.log('🔓 window.userInteracted = true');
+            
+            // Ocultar botón y mostrar instrucciones y botón de mute
+            startButton.classList.add('hidden');
+            instructions.classList.remove('hidden');
+            muteButton.classList.remove('hidden');
+            
+            // Marcar que el usuario ya interactuó (IMPORTANTE)
+            window.userInteracted = true;
+            
+            // Verificar que se haya establecido
+            console.log('✅ Verificando: window.userInteracted =', window.userInteracted);
+            
+            // Iniciar música de fondo
+            const bgMusic = document.getElementById('backgroundMusic');
+            if (bgMusic) {
+                bgMusic.volume = 0.1; // Volumen bajo para no interferir
+                bgMusic.play()
+                    .then(() => console.log('🎵 Música de fondo iniciada'))
+                    .catch(e => console.log('⚠️ Error iniciando música:', e.message));
+            }
+            
+            // Iniciar sonido de respiración (sistema inicial)
+            const breathingSound = document.getElementById('breathing-sound');
+            if (breathingSound) {
+                breathingSound.volume = 0.8; // Volumen bajo
+                breathingSound.play()
+                    .then(() => console.log('🫁 Sonido de respiración iniciado'))
+                    .catch(e => console.log('⚠️ Error iniciando respiración:', e.message));
+            }
+            
+            // Pre-cargar todos los audios Y reproducir uno de prueba
+            const audioSources = [
+                './audio/respiratorio.mp3',
+                './audio/circulatorio.mp3',
+                './audio/inmuno.mp3'
+            ];
+            
+            // Reproducir un audio de prueba muy corto (silencioso)
+            const testAudio = new Audio();
+            testAudio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+            testAudio.play()
+                .then(() => {
+                    console.log('🎵 Audio de prueba OK - Navegador desbloqueado');
+                })
+                .catch(e => {
+                    console.log('⚠️ No se pudo reproducir audio de prueba:', e.message);
+                });
+            
+            audioSources.forEach(src => {
+                const audio = new Audio(src);
+                audio.load();
+                console.log(`📥 Pre-cargando: ${src}`);
+            });
+            
+            // Intentar entrar en modo VR automáticamente
+            try {
+                console.log('👓 Intentando activar modo VR...');
+                const scene = document.querySelector('a-scene');
+                
+                // Método 1: Usar el botón VR nativo de A-Frame
+                if (scene.components['vr-mode-ui']) {
+                    const vrModeUI = scene.components['vr-mode-ui'];
+                    if (vrModeUI.enterVRButton) {
+                        // Pequeño delay para asegurar que el audio se haya iniciado
+                        setTimeout(() => {
+                            vrModeUI.enterVRButton.click();
+                            console.log('✅ Modo VR activado con botón nativo');
+                        }, 500);
+                    }
+                } else if (navigator.xr) {
+                    // Método 2: Verificar soporte WebXR
+                    const isSupported = await navigator.xr.isSessionSupported('immersive-vr');
+                    if (isSupported) {
+                        setTimeout(() => {
+                            scene.enterVR();
+                            console.log('✅ Sesión WebXR VR iniciada');
+                        }, 500);
+                    } else {
+                        console.log('ℹ️ WebXR no soportado en este dispositivo');
+                    }
+                } else {
+                    console.log('ℹ️ WebXR no disponible - Usa el botón VR de A-Frame si está disponible');
+                }
+            } catch (e) {
+                console.log('⚠️ Error al entrar en VR:', e.message);
+                console.log('ℹ️ Usa el botón VR de A-Frame en la esquina inferior derecha si está disponible');
+            }
+            
+            // Ocultar instrucciones después de 5 segundos
+            setTimeout(() => {
+                instructions.style.opacity = '0';
+                instructions.style.transition = 'opacity 1s';
+                setTimeout(() => {
+                    instructions.classList.add('hidden');
+                }, 1000);
+            }, 5000);
+        });
+        
+        // Manejar el botón de mute/unmute
+        let isMuted = false;
+        muteButton.addEventListener('click', () => {
+            const bgMusic = document.getElementById('backgroundMusic');
+            
+            if (bgMusic) {
+                isMuted = !isMuted;
+                
+                if (isMuted) {
+                    bgMusic.pause();
+                    muteButton.textContent = '🔇';
+                    muteButton.classList.add('muted');
+                    console.log('🔇 Música silenciada');
+                } else {
+                    bgMusic.play()
+                        .then(() => {
+                            muteButton.textContent = '🔊';
+                            muteButton.classList.remove('muted');
+                            console.log('🔊 Música activada');
+                        })
+                        .catch(e => console.log('⚠️ Error activando música:', e.message));
+                }
+            }
+        });
+        
+        // 🌓 Sistema de cielo dinámico - Cambia color según el sistema activo
+        
+        // Esperar a que la escena esté lista
+        document.querySelector('a-scene').addEventListener('loaded', () => {
+            const sky = document.querySelector('#dynamic-sky');
+            
+            // Función para cambiar el color del cielo
+            function changeSkyColor(color, systemName) {
+                console.log(`� Cambiando cielo a ${systemName}: ${color}`);
+                sky.setAttribute('animation__skychange', {
+                    property: 'material.color',
+                    to: color,
+                    dur: 2000,
+                    easing: 'easeInOutSine'
+                });
+            }
+            
+            // Colores para cada sistema:
+            const skyColors = {
+                'sistema-respiratorio': '#2a1a0a',    // Marrón/beige (aire/pulmones)
+                'sistema-circulatorio': '#4a0e1a',    // Rojo sangre (arterial)
+                'sistema-inmunologico': '#0a1a3a',    // Azul profundo (defensas/células)
+                'sistema-final': '#1a0a2e'            // Púrpura cósmico (universo/completo)
+            };
+            
+            // Cambiar color del cielo INMEDIATAMENTE al sistema respiratorio (que está visible al inicio)
+            setTimeout(() => {
+                changeSkyColor(skyColors['sistema-respiratorio'], 'Respiratorio');
+            }, 1000);
+            
+            // Observar cambios en el atributo 'visible' de cada sistema
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.attributeName === 'visible') {
+                        const target = mutation.target;
+                        const isVisible = target.getAttribute('visible') === 'true';
+                        
+                        if (isVisible && skyColors[target.id]) {
+                            changeSkyColor(skyColors[target.id], target.id);
+                        }
+                    }
+                });
+            });
+            
+            // Obtener y observar todos los sistemas
+            const sistemas = [
+                document.querySelector('#sistema-respiratorio'),
+                document.querySelector('#sistema-circulatorio'),
+                document.querySelector('#sistema-inmunologico'),
+                document.querySelector('#sistema-final')
+            ];
+            
+            sistemas.forEach(sistema => {
+                if (sistema) {
+                    observer.observe(sistema, { attributes: true, attributeFilter: ['visible'] });
+                    console.log(`👀 Observando cambios en: ${sistema.id}`);
+                }
+            });
+            
+            // TAMBIÉN observar cambios de scale (porque los sistemas aparecen con animación de scale)
+            const scaleObserver = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.attributeName === 'scale') {
+                        const target = mutation.target;
+                        const scale = target.getAttribute('scale');
+                        const isVisible = target.getAttribute('visible') === 'true';
+                        
+                        // Si el scale es mayor que 0 y está visible, cambiar cielo
+                        if (scale && scale.x > 0 && isVisible && skyColors[target.id]) {
+                            console.log(`🔄 Scale cambió en ${target.id}: ${JSON.stringify(scale)}`);
+                            changeSkyColor(skyColors[target.id], target.id);
+                        }
+                    }
+                });
+            });
+            
+            // También observar scale
+            sistemas.forEach(sistema => {
+                if (sistema) {
+                    scaleObserver.observe(sistema, { attributes: true, attributeFilter: ['scale'] });
+                }
+            });
+            
+            // HACK: Cambiar cielo manualmente cuando cada sistema aparece
+            // Escuchar el evento 'animationcomplete' de cada sistema
+            document.getElementById('sistema-circulatorio').addEventListener('animationcomplete', function(evt) {
+                if (evt.detail.name === 'animation__appear') {
+                    console.log('💥 CIRCULATORIO APARECIÓ - CAMBIANDO CIELO');
+                    const sky = document.querySelector('#dynamic-sky');
+                    sky.setAttribute('color', '#4a0e1a');
+                }
+            });
+            
+            document.getElementById('sistema-inmunologico').addEventListener('animationcomplete', function(evt) {
+                if (evt.detail.name === 'animation__appear') {
+                    console.log('💥 INMUNOLÓGICO APARECIÓ - CAMBIANDO CIELO');
+                    const sky = document.querySelector('#dynamic-sky');
+                    sky.setAttribute('color', '#0a1a3a');
+                }
+            });
+            
+            document.getElementById('sistema-final').addEventListener('animationcomplete', function(evt) {
+                if (evt.detail.name === 'animation__appear') {
+                    console.log('💥 FINAL APARECIÓ - CAMBIANDO CIELO');
+                    const sky = document.querySelector('#dynamic-sky');
+                    sky.setAttribute('color', '#1a0a2e');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

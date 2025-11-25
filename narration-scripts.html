@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scripts de Narración - Cuerpo Humano VR</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .system {
+            background: white;
+            padding: 25px;
+            margin: 25px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .system h2 {
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+        .respiratory { border-left: 5px solid #4CAF50; }
+        .circulatory { border-left: 5px solid #F44336; }
+        .immune { border-left: 5px solid #2196F3; }
+        
+        .script {
+            background: #ecf0f1;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .icon {
+            font-size: 48px;
+            text-align: center;
+            margin: 10px 0;
+        }
+        .info {
+            background: #fff3cd;
+            padding: 15px;
+            margin: 20px 0;
+            border-left: 4px solid #ffc107;
+            border-radius: 5px;
+        }
+        .duration {
+            color: #7f8c8d;
+            font-size: 14px;
+            font-style: italic;
+        }
+        .button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        .button:hover {
+            background: #2980b9;
+        }
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>📝 Scripts de Narración para Cuerpo Humano VR</h1>
+    
+    <div class="info">
+        <strong>ℹ️ Información:</strong> Estos son los textos que debes convertir a audio (MP3) 
+        usando servicios de Text-to-Speech. Cada narración debe durar aproximadamente 10-15 segundos.
+    </div>
+
+    <div class="controls">
+        <button class="button" onclick="copyAll()">📋 Copiar Todos los Textos</button>
+        <button class="button" onclick="window.print()">🖨️ Imprimir</button>
+    </div>
+
+    <div class="system respiratory">
+        <div class="icon">🫁</div>
+        <h2>Sistema Respiratorio</h2>
+        <p><strong>Archivo:</strong> respiratory.mp3</p>
+        <p class="duration">Duración aproximada: 12-15 segundos</p>
+        
+        <div class="script" id="resp-script">
+            El oxígeno entra y el dióxido de carbono sale. 
+            El aire limpio es importante. 
+            La nariz y los pulmones nos protegen del aire sucio.
+        </div>
+        
+        <button class="button" onclick="copyText('resp-script')">Copiar Texto</button>
+        <button class="button" onclick="speak('resp-script')">🔊 Escuchar (TTS del Navegador)</button>
+        
+        <h3>Información Adicional (Opcional):</h3>
+        <ul>
+            <li>Los pulmones se expanden al inhalar y se contraen al exhalar</li>
+            <li>Intercambiamos gases: oxígeno entra, CO₂ sale</li>
+            <li>La respiración profunda nos ayuda a relajarnos</li>
+            <li>El ejercicio fortalece nuestros pulmones</li>
+        </ul>
+    </div>
+
+    <div class="system circulatory">
+        <div class="icon">🫀</div>
+        <h2>Sistema Circulatorio</h2>
+        <p><strong>Archivo:</strong> circulatory.mp3</p>
+        <p class="duration">Duración aproximada: 12-15 segundos</p>
+        
+        <div class="script" id="circ-script">
+            El corazón bombea sangre con oxígeno. 
+            El ejercicio acelera el corazón. 
+            Podemos sentir el pulso en la muñeca.
+        </div>
+        
+        <button class="button" onclick="copyText('circ-script')">Copiar Texto</button>
+        <button class="button" onclick="speak('circ-script')">🔊 Escuchar (TTS del Navegador)</button>
+        
+        <h3>Información Adicional (Opcional):</h3>
+        <ul>
+            <li>El corazón late unas 100,000 veces al día</li>
+            <li>Las arterias llevan sangre con oxígeno</li>
+            <li>Las venas traen sangre de vuelta al corazón</li>
+            <li>El ejercicio mantiene nuestro corazón fuerte</li>
+        </ul>
+    </div>
+
+    <div class="system immune">
+        <div class="icon">🛡️</div>
+        <h2>Sistema Inmunológico</h2>
+        <p><strong>Archivo:</strong> immune.mp3</p>
+        <p class="duration">Duración aproximada: 12-15 segundos</p>
+        
+        <div class="script" id="immune-script">
+            El cuerpo tiene defensas. 
+            Si vivimos mal, el cuerpo se debilita. 
+            Comer bien y hacer ejercicio ayuda a defendernos.
+        </div>
+        
+        <button class="button" onclick="copyText('immune-script')">Copiar Texto</button>
+        <button class="button" onclick="speak('immune-script')">🔊 Escuchar (TTS del Navegador)</button>
+        
+        <h3>Información Adicional (Opcional):</h3>
+        <ul>
+            <li>Los glóbulos blancos son nuestros soldados internos</li>
+            <li>Atacan virus y bacterias que nos enferman</li>
+            <li>Dormir bien fortalece nuestras defensas</li>
+            <li>Las vacunas entrenan a nuestro sistema inmune</li>
+        </ul>
+    </div>
+
+    <div class="info">
+        <h3>🎙️ Recomendaciones para Grabar:</h3>
+        <ul>
+            <li><strong>Voz:</strong> Clara, amigable, ritmo moderado</li>
+            <li><strong>Tono:</strong> Educativo pero no aburrido</li>
+            <li><strong>Pausas:</strong> Breves entre cada frase</li>
+            <li><strong>Público:</strong> Niños de 8-12 años</li>
+            <li><strong>Formato:</strong> MP3, 128-192 kbps</li>
+            <li><strong>Duración:</strong> 12-15 segundos por narración</li>
+        </ul>
+    </div>
+
+    <div class="info" style="background: #d4edda; border-left-color: #28a745;">
+        <h3>🔗 Servicios Recomendados:</h3>
+        <ul>
+            <li><a href="https://elevenlabs.io/" target="_blank">ElevenLabs</a> - IA de voz natural</li>
+            <li><a href="https://www.narakeet.com/" target="_blank">Narakeet</a> - TTS en español</li>
+            <li><a href="https://cloud.google.com/text-to-speech" target="_blank">Google Cloud TTS</a> - Profesional</li>
+            <li><a href="https://aws.amazon.com/polly/" target="_blank">Amazon Polly</a> - Alta calidad</li>
+            <li><a href="https://ttsmaker.com/" target="_blank">TTSMaker</a> - Gratuito online</li>
+        </ul>
+    </div>
+
+    <script>
+        function copyText(elementId) {
+            const text = document.getElementById(elementId).innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('✅ Texto copiado al portapapeles');
+            });
+        }
+
+        function copyAll() {
+            const resp = document.getElementById('resp-script').innerText;
+            const circ = document.getElementById('circ-script').innerText;
+            const immune = document.getElementById('immune-script').innerText;
+            
+            const allText = `Sistema Respiratorio:\n${resp}\n\nSistema Circulatorio:\n${circ}\n\nSistema Inmunológico:\n${immune}`;
+            
+            navigator.clipboard.writeText(allText).then(() => {
+                alert('✅ Todos los textos copiados al portapapeles');
+            });
+        }
+
+        function speak(elementId) {
+            const text = document.getElementById(elementId).innerText;
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'es-ES';
+            utterance.rate = 0.9;
+            window.speechSynthesis.speak(utterance);
+        }
+    </script>
+</body>
+</html>
