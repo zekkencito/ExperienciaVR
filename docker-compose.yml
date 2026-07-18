@@ -1,0 +1,9 @@
+version: '3.8'
+services:
+  experienciavr:
+    build: .
+    image: zekken03x/experienciavr:latest
+    container_name: experienciavr
+    restart: always
+    ports:
+      - "3003:80"
