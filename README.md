@@ -66,7 +66,7 @@ python -m http.server 8000
 1. Instala la extensión **Live Server**.
 2. `index-aframe.html` → clic derecho → **Open with Live Server**.
 
-### Opción 4 — Docker 🐳
+### Opción 4 — Docker 
 
 ```bash
 # Build e inicio del contenedor (nginx, puerto 3003)
@@ -102,7 +102,7 @@ cuerpo-humano-vr/
 └── package.json            # Scripts npm (http-server)
 ```
 
-## 🎮 Controles
+##  Controles
 
 | Acción | A-Frame (`index-aframe.html`) | Three.js (`main.js`) |
 |---|---|---|
@@ -113,7 +113,7 @@ cuerpo-humano-vr/
 
 En el **modo VR**, los sistemas se muestran solo cuando miras en su dirección (frente → respiratorio, derecha → circulatorio, atrás → inmunológico, izquierda → final). En escritorio, gira la vista con el mouse para revelarlos.
 
-## 🎵 Audio
+##  Audio
 
 ### Archivos incluidos
 
@@ -240,11 +240,11 @@ Sin visor también funciona en escritorio/móvil: el recorrido se puede completa
 - [WebXR Device API](https://www.w3.org/TR/webxr/)
 - [MDN — WebXR](https://developer.mozilla.org/es/docs/Web/API/WebXR_Device_API)
 
-## 📄 Licencia
+##  Licencia
 
 MIT — consulta el archivo [LICENSE](LICENSE) para más detalles. Disponible para uso educativo.
 
-## 👨‍💻 Autor
+##  Autor
 
 - **Renzo Caycho** — [github.com/zekkencito](https://github.com/zekkencito)
 - Repositorio: [github.com/zekkencito/ExperienciaVR](https://github.com/zekkencito/ExperienciaVR)
