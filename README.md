@@ -1,4 +1,4 @@
-# 🫁🫀🛡️ Cuerpo Humano VR — Experiencia Educativa Interactiva
+#  Cuerpo Humano VR — Experiencia Educativa Interactiva
 
 [![Demo en vivo](https://img.shields.io/badge/demo-en%20vivo-brightgreen)](https://vrbody.caychopomachagua.dev)
 [![A-Frame](https://img.shields.io/badge/A--Frame-1.5.0-ef2d5e)](https://aframe.io/)
@@ -13,7 +13,7 @@ Experiencia de **realidad virtual educativa sobre el cuerpo humano**, creada par
 
 ---
 
-## 🧬 ¿De qué trata?
+##  ¿De qué trata?
 
 El proyecto contiene **dos implementaciones** del mismo recorrido educativo:
 
@@ -25,24 +25,24 @@ El proyecto contiene **dos implementaciones** del mismo recorrido educativo:
 
 Se exploran **cuatro zonas del cuerpo** en una secuencia guiada:
 
-1. 🫁 **Sistema Respiratorio** (al frente) — pulmones con animación de respiración y bronquios.
-2. 🫀 **Sistema Circulatorio** (a la derecha) — corazón con latido (ritmo ~90 BPM) y vasos sanguíneos.
-3. 🛡️ **Sistema Inmunológico** (atrás) — glóbulos blancos enfrentando virus con células en movimiento.
-4. 🌍 **Secuencia final** (a la izquierda) — cierre con audio especial y pantalla final.
-
+1.  **Sistema Respiratorio** (al frente) — pulmones con animación de respiración y bronquios.
+2.  **Sistema Circulatorio** (a la derecha) — corazón con latido (ritmo ~90 BPM) y vasos sanguíneos.
+3.  **Sistema Inmunológico** (atrás) — glóbulos blancos enfrentando virus con células en movimiento.
+4.  **Secuencia final** (a la izquierda) — cierre con audio especial y pantalla final.
+5. 
 Cada sistema incluye **narración de audio**, **música ambiental**, **efectos de partículas** y **etiquetas flotantes** con su nombre.
 
-## 🎯 Características
+##  Características
 
-- ✅ **Interacción por mirada**: mantén la vista sobre un sistema ~1.5 s para activar su descripción (con cooldown de 15 s entre activaciones).
-- ✅ **Flechas guía 3D** que indican hacia dónde girar para continuar el recorrido.
-- ✅ **Audio espacial**: música de fondo, narración por sistema, latido, respiración y secuencia final.
-- ✅ **Soporte WebXR**: entra en modo VR desde visores (Meta Quest, Cardboard, etc.).
-- ✅ Visualización por clic en escritorio (en la versión Three.js: rotar con *OrbitControls* y zoom con rueda del mouse).
-- ✅ Botón **COMENZAR EXPERIENCIA VR** y control de **silenciar música**.
-- ✅ **Atmósfera inmersiva**: en la versión Three.js incluye cielo nocturno con estrellas y niebla; en la versión A-Frame incluye **cielo dinámico** que cambia de color según el sistema y glóbulos rojos flotantes. Ambas tienen suelo y luces de acento de color por sistema (verde / rojo / azul).
+- **Interacción por mirada**: mantén la vista sobre un sistema ~1.5 s para activar su descripción (con cooldown de 15 s entre activaciones).
+- **Flechas guía 3D** que indican hacia dónde girar para continuar el recorrido.
+- **Audio espacial**: música de fondo, narración por sistema, latido, respiración y secuencia final.
+- **Soporte WebXR**: entra en modo VR desde visores (Meta Quest, Cardboard, etc.).
+- Visualización por clic en escritorio (en la versión Three.js: rotar con *OrbitControls* y zoom con rueda del mouse).
+- Botón **COMENZAR EXPERIENCIA VR** y control de **silenciar música**.
+- *Atmósfera inmersiva**: en la versión Three.js incluye cielo nocturno con estrellas y niebla; en la versión A-Frame incluye **cielo dinámico** que cambia de color según el sistema y glóbulos rojos flotantes. Ambas tienen suelo y luces de acento de color por sistema (verde / rojo / azul).
 
-## 🚀 Instalación y ejecución
+##  Instalación y ejecución
 
 ### Opción 1 — Node.js (recomendada)
 
@@ -82,7 +82,7 @@ docker compose -f docker-compose.prod.yml up -d
 
 > ⚠️ Nota: no abras los archivos haciendo doble-clic (doble clic en `file://`); el cargado de modelos y audio requiere un servidor HTTP.
 
-## 📂 Estructura del proyecto
+##  Estructura del proyecto
 
 ```
 cuerpo-humano-vr/
@@ -150,7 +150,7 @@ this.audioLoader.load('./audio/respiratory.mp3', (buffer) => {
 });
 ```
 
-> 💡 En la versión A-Frame el audio ya está cableado en el HTML y usa los nombres que **ya existen** en `audio/` (`respiratorio.mp3`, `circulatorio.mp3`, `inmuno.mp3`, etc.).
+>  En la versión A-Frame el audio ya está cableado en el HTML y usa los nombres que **ya existen** en `audio/` (`respiratorio.mp3`, `circulatorio.mp3`, `inmuno.mp3`, etc.).
 
 ### Guiones de narración
 
@@ -160,7 +160,7 @@ Están disponibles en `narration-scripts.html` y también embebidos como textos 
 - **Circulatorio:** "El corazón bombea sangre con oxígeno. El ejercicio acelera el corazón. Podemos sentir el pulso en la muñeca."
 - **Inmunológico:** "El cuerpo tiene defensas. Si vivimos mal, el cuerpo se debilita. Comer bien y hacer ejercicio ayuda a defendernos."
 
-## 🎨 Personalización
+##  Personalización
 
 ### Colores de los sistemas (Three.js — `main.js`)
 
@@ -178,7 +178,7 @@ const lungMaterial = new THREE.MeshStandardMaterial({
 });
 ```
 
-> 💡 En la versión A-Frame los colores se cambian en el HTML (atributos `material` de cada `<a-entity>`).
+>  En la versión A-Frame los colores se cambian en el HTML (atributos `material` de cada `<a-entity>`).
 
 ### Posición de los sistemas
 
@@ -196,7 +196,7 @@ const lungMaterial = new THREE.MeshStandardMaterial({
 
 En la versión A-Frame el latido se controla con el componente `heartbeat` (`bpm: 90`, `lubScale`/`dubScale`).
 
-## 🔧 Requisitos técnicos
+##  Requisitos técnicos
 
 - **Navegador con soporte WebXR** para el modo VR (Chrome/Edge en Android, Meta Quest Browser, Samsung Internet).
 - **HTTPS o `localhost`** (WebXR y el audio requieren contexto seguro en producción).
@@ -206,7 +206,7 @@ En la versión A-Frame el latido se controla con el componente `heartbeat` (`bpm
 
 Sin visor también funciona en escritorio/móvil: el recorrido se puede completar con mouse y teclado o pantalla táctil.
 
-## 🐛 Solución de problemas
+##  Solución de problemas
 
 | Problema | Solución |
 |---|---|
@@ -215,14 +215,14 @@ Sin visor también funciona en escritorio/móvil: el recorrido se puede completa
 | No se ve nada en VR | Conecta el visor, otorga permisos al navegador y actualiza drivers/firmware. |
 | El audio no se reproduce | Revisa que existan los archivos en `audio/` y que el navegador permita autoplay tras interacción del usuario (botón "COMENZAR"). |
 
-## 🎓 Objetivos educativos
+##  Objetivos educativos
 
 - **Anatomía básica**: estructura y ubicación de los sistemas del cuerpo.
 - **Fisiología**: cómo funcionan (respiración, bombeo de sangre, defensas).
 - **Salud**: hábitos que fortalecen el organismo.
 - **Ciencia y tecnología**: aplicación educativa de la realidad virtual.
 
-## 🚀 Mejoras futuras
+##  Mejoras futuras
 
 - [ ] Agregar más sistemas (digestivo, nervioso, óseo).
 - [ ] Quiz interactivo por sistema.
@@ -233,7 +233,7 @@ Sin visor también funciona en escritorio/móvil: el recorrido se puede completa
 - [ ] Integración con controladores VR.
 - [ ] Modo AR (Realidad Aumentada).
 
-## 📚 Recursos
+##  Recursos
 
 - [A-Frame](https://aframe.io/) — framework para web VR.
 - [Three.js Documentation](https://threejs.org/docs/)
@@ -251,5 +251,3 @@ MIT — consulta el archivo [LICENSE](LICENSE) para más detalles. Disponible pa
 - Demo: [vrbody.caychopomachagua.dev](https://vrbody.caychopomachagua.dev)
 
 ---
-
-**¡Disfruta explorando el cuerpo humano en VR! 🎉**
