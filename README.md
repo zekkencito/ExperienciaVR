@@ -1,312 +1,254 @@
-# 🫁🫀🛡️ Cuerpo Humano VR - Experiencia Educativa Interactiva
+# 🫁🫀🛡️ Cuerpo Humano VR — Experiencia Educativa Interactiva
 
-Proyecto de realidad virtual educativa desarrollado con **Three.js** y **WebXR** para enseñar sobre los sistemas del cuerpo humano de forma inmersiva e interactiva.
+[![Demo en vivo](https://img.shields.io/badge/demo-en%20vivo-brightgreen)](https://vrbody.caychopomachagua.dev)
+[![A-Frame](https://img.shields.io/badge/A--Frame-1.5.0-ef2d5e)](https://aframe.io/)
+[![Three.js](https://img.shields.io/badge/Three.js-r15x-black)](https://threejs.org/)
+[![WebXR](https://img.shields.io/badge/WebXR-compatible-blue)](https://developer.mozilla.org/es/docs/Web/API/WebXR_Device_API)
+[![Docker](https://img.shields.io/badge/Docker-listos-2496ed?)](https://www.docker.com/)
+[![Licencia MIT](https://img.shields.io/badge/licencia-MIT-yellowgreen)](LICENSE)
+
+Experiencia de **realidad virtual educativa sobre el cuerpo humano**, creada para explorar los sistemas del organismo de forma inmersiva e interactiva. Funciona en **visores VR** y también en navegadores de escritorio o móviles sin visor.
+
+> 🔴 **Demo en vivo:** [https://vrbody.caychopomachagua.dev](https://vrbody.caychopomachagua.dev)
+
+---
+
+## 🧬 ¿De qué trata?
+
+El proyecto contiene **dos implementaciones** del mismo recorrido educativo:
+
+| Archivo | Tecnología | Descripción |
+|---|---|---|
+| `index-aframe.html` | **A-Frame 1.5.0** | **Versión principal (la que se despliega).** Recorrido guiado por mirada, con modelo del cuerpo humano, flechas de navegación, audio por sistema y secuencia final animada. |
+| `main.js` | **Three.js + WebXR** | Versión alternativa. Los sistemas se construyen con geometría procedural (esferas, tubos, icosaedros) en lugar de modelos externos. |
+| `narration-scripts.html` | Documentación | Guiones de narración de cada sistema. |
+
+Se exploran **cuatro zonas del cuerpo** en una secuencia guiada:
+
+1. 🫁 **Sistema Respiratorio** (al frente) — pulmones con animación de respiración y bronquios.
+2. 🫀 **Sistema Circulatorio** (a la derecha) — corazón con latido (ritmo ~90 BPM) y vasos sanguíneos.
+3. 🛡️ **Sistema Inmunológico** (atrás) — glóbulos blancos enfrentando virus con células en movimiento.
+4. 🌍 **Secuencia final** (a la izquierda) — cierre con audio especial y pantalla final.
+
+Cada sistema incluye **narración de audio**, **música ambiental**, **efectos de partículas** y **etiquetas flotantes** con su nombre.
 
 ## 🎯 Características
 
-### Sistemas del Cuerpo Humano
+- ✅ **Interacción por mirada**: mantén la vista sobre un sistema ~1.5 s para activar su descripción (con cooldown de 15 s entre activaciones).
+- ✅ **Flechas guía 3D** que indican hacia dónde girar para continuar el recorrido.
+- ✅ **Audio espacial**: música de fondo, narración por sistema, latido, respiración y secuencia final.
+- ✅ **Soporte WebXR**: entra en modo VR desde visores (Meta Quest, Cardboard, etc.).
+- ✅ Visualización por clic en escritorio (en la versión Three.js: rotar con *OrbitControls* y zoom con rueda del mouse).
+- ✅ Botón **COMENZAR EXPERIENCIA VR** y control de **silenciar música**.
+- ✅ **Atmósfera inmersiva**: en la versión Three.js incluye cielo nocturno con estrellas y niebla; en la versión A-Frame incluye **cielo dinámico** que cambia de color según el sistema y glóbulos rojos flotantes. Ambas tienen suelo y luces de acento de color por sistema (verde / rojo / azul).
 
-1. **Sistema Respiratorio 🫁** (Vista Frontal)
-   - Modelos 3D de pulmones y bronquios
-   - Animación de respiración (expansión y contracción)
-   - Narración educativa sobre la función respiratoria
+## 🚀 Instalación y ejecución
 
-2. **Sistema Circulatorio 🫀** (Vista Derecha)
-   - Corazón animado con latido
-   - Venas y arterias visualizadas
-   - Explicación del bombeo de sangre
-
-3. **Sistema Inmunológico 🛡️** (Vista Izquierda)
-   - Glóbulo blanco vs virus
-   - Animación de ataque celular
-   - Información sobre las defensas del cuerpo
-
-### Funcionalidades VR
-
-- ✅ Soporte completo para WebXR (VR)
-- ✅ Detección de orientación de cámara
-- ✅ Activación automática de sistemas al mirar en cada dirección
-- ✅ Efectos de partículas al activar sistemas
-- ✅ Música ambiental en loop
-- ✅ Narración de audio para cada sistema
-- ✅ Controles de zoom y rotación
-- ✅ Texto flotante con nombres de sistemas
-- ✅ Interfaz informativa
-
-## 🚀 Instalación y Uso
-
-### Opción 1: Servidor Local Simple
-
-1. **Usando Python:**
-   ```bash
-   # Python 3
-   python -m http.server 8000
-   ```
-
-2. **Usando Node.js:**
-   ```bash
-   # Si tienes npx instalado
-   npx http-server -p 8000
-   ```
-
-3. **Abre tu navegador en:**
-   ```
-   http://localhost:8000
-   ```
-
-### Opción 2: Extensión de VS Code
-
-1. Instala la extensión **"Live Server"** en VS Code
-2. Haz clic derecho en `index.html` → "Open with Live Server"
-
-### Opción 3: Node.js + npm
+### Opción 1 — Node.js (recomendada)
 
 ```bash
-# Instalar http-server globalmente
-npm install -g http-server
+# Instalar dependencias (http-server)
+npm install
 
-# Ejecutar en la carpeta del proyecto
-http-server -p 8000
+# Abre en http://localhost:8000
+npm start          # o: npm run dev  (abre el navegador automáticamente)
+```
+
+### Opción 2 — Servidor Python
+
+```bash
+python -m http.server 8000
+# Abre http://localhost:8000/index-aframe.html
+```
+
+### Opción 3 — VS Code (Live Server)
+
+1. Instala la extensión **Live Server**.
+2. `index-aframe.html` → clic derecho → **Open with Live Server**.
+
+### Opción 4 — Docker 🐳
+
+```bash
+# Build e inicio del contenedor (nginx, puerto 3003)
+docker compose up -d
+# Abre http://localhost:3003
+```
+
+Para producción usando la imagen ya publicada:
+
+```bash
+docker compose -f docker-compose.prod.yml up -d
+```
+
+> ⚠️ Nota: no abras los archivos haciendo doble-clic (doble clic en `file://`); el cargado de modelos y audio requiere un servidor HTTP.
+
+## 📂 Estructura del proyecto
+
+```
+cuerpo-humano-vr/
+├── index-aframe.html       # Versión principal (A-Frame)
+├── main.js                 # Versión alternativa (Three.js + WebXR)
+├── narration-scripts.html  # Guiones de narración
+├── models/                 # Modelos 3D (GLB/FBX)
+│   ├── person.glb, male.glb, human.glb   # Cuerpo humano
+│   ├── lungs.glb, Bronquios.glb, traquea.glb, Nose.glb, PulmonDer/Izq.glb
+│   ├── Heart.glb, corazon.glb
+│   ├── Virus.glb, Cell.glb, redcell.glb
+│   ├── arrow.glb, planet.glb
+├── audio/                  # Archivos de audio (ver sección de audio)
+├── Dockerfile              # Imagen nginx (expone el puerto 80)
+├── docker-compose.yml      # Build local → http://localhost:3003
+├── docker-compose.prod.yml # Usa imagen: zekken03x/experienciavr:latest
+└── package.json            # Scripts npm (http-server)
 ```
 
 ## 🎮 Controles
 
-### Modo Escritorio (sin VR)
-- 🖱️ **Clic izquierdo + Arrastrar**: Rotar vista
-- 🔍 **Rueda del mouse**: Zoom in/out
-- 🖱️ **Clic en sistema**: Activar narración y efectos
+| Acción | A-Frame (`index-aframe.html`) | Three.js (`main.js`) |
+|---|---|---|
+| **Activar sistema** | Mirar el sistema durante ~1.5 s (o clic) | Clic sobre el sistema |
+| **Rotar vista** | Girar la cabeza (VR) o arrastrar con el mouse (escritorio) | Clic izquierdo + arrastrar (*OrbitControls*) |
+| **Zoom** | Acercarte físicamente | Rueda del mouse |
+| **Audio** | Conmutar con el botón 🔊 | Configurado por código |
 
-### Modo VR
-- 👀 **Mirar al frente**: Sistema Respiratorio
-- 👀 **Mirar a la derecha**: Sistema Circulatorio
-- 👀 **Mirar a la izquierda**: Sistema Inmunológico
-- 👆 **Acercarse**: Mostrar detalles del sistema
+En el **modo VR**, los sistemas se muestran solo cuando miras en su dirección (frente → respiratorio, derecha → circulatorio, atrás → inmunológico, izquierda → final). En escritorio, gira la vista con el mouse para revelarlos.
 
-## 🎵 Configuración de Audio
+## 🎵 Audio
 
-### Estructura de Archivos de Audio
+### Archivos incluidos
 
-Crea una carpeta `audio` en la raíz del proyecto y coloca los siguientes archivos:
+| Archivo | Uso |
+|---|---|
+| `music.mp3` | Música ambiental de fondo |
+| `respiratorio.mp3` | Narración del sistema respiratorio |
+| `circulatorio.mp3` | Narración del sistema circulatorio |
+| `inmuno.mp3` | Narración del sistema inmunológico |
+| `breathing.mp3` | Efecto de respiración |
+| `heartbeat.mp3` | Efecto de latido del corazón |
+| `battle.mp3` | Ambiente de la escena de células |
+| `click.wav` | Sonido de confirmación/interacción |
+| `final1.mp3`, `final2.mp3` | Secuencia final |
 
-```
-Sistemas/
-├── audio/
-│   ├── ambient.mp3          # Música ambiental espacial
-│   ├── respiratory.mp3      # Narración sistema respiratorio
-│   ├── circulatory.mp3      # Narración sistema circulatorio
-│   └── immune.mp3           # Narración sistema inmunológico
-├── index.html
-└── main.js
-```
+### Activar audio en la versión Three.js (`main.js`)
 
-### Textos de Narración (para generar audio)
+En la versión Three.js el cargador de audio está **comentado**. Dentro de `setupAudio()` (línea 453):
 
-**Sistema Respiratorio (respiratory.mp3):**
-```
-"El oxígeno entra y el dióxido de carbono sale. 
-El aire limpio es importante. 
-La nariz y los pulmones nos protegen del aire sucio."
-```
+- Bloque de música ambiental: **líneas 458–465** (espera `./audio/ambient.mp3`).
+- Bloque de narraciones: **líneas 474–484** (espera `./audio/respiratory.mp3`, `./audio/circulatory.mp3`, `./audio/immune.mp3`).
 
-**Sistema Circulatorio (circulatory.mp3):**
-```
-"El corazón bombea sangre con oxígeno. 
-El ejercicio acelera el corazón. 
-Podemos sentir el pulso en la muñeca."
-```
-
-**Sistema Inmunológico (immune.mp3):**
-```
-"El cuerpo tiene defensas. 
-Si vivimos mal, el cuerpo se debilita. 
-Comer bien y hacer ejercicio ayuda a defendernos."
-```
-
-### Activar el Audio en el Código
-
-Una vez que tengas los archivos de audio, descomenta las siguientes secciones en `main.js`:
-
-**Líneas 295-301** (Música ambiental):
 ```javascript
+// Música ambiental — descomenta para activar
 this.audioLoader.load('./audio/ambient.mp3', (buffer) => {
     this.ambientMusic.setBuffer(buffer);
     this.ambientMusic.setLoop(true);
     this.ambientMusic.setVolume(0.3);
 });
-```
 
-**Líneas 308-318** (Narraciones):
-```javascript
+// Narraciones — descomenta para activar
 this.audioLoader.load('./audio/respiratory.mp3', (buffer) => {
     this.systems.respiratory.userData.audio.setBuffer(buffer);
 });
-this.audioLoader.load('./audio/circulatory.mp3', (buffer) => {
-    this.systems.circulatory.userData.audio.setBuffer(buffer);
-});
-this.audioLoader.load('./audio/immune.mp3', (buffer) => {
-    this.systems.immune.userData.audio.setBuffer(buffer);
-});
 ```
 
-### Herramientas para Generar Audio
+> 💡 En la versión A-Frame el audio ya está cableado en el HTML y usa los nombres que **ya existen** en `audio/` (`respiratorio.mp3`, `circulatorio.mp3`, `inmuno.mp3`, etc.).
 
-**Servicios de Text-to-Speech (TTS):**
-- [Google Cloud Text-to-Speech](https://cloud.google.com/text-to-speech)
-- [Amazon Polly](https://aws.amazon.com/polly/)
-- [ElevenLabs](https://elevenlabs.io/) - Voces naturales
-- [Narakeet](https://www.narakeet.com/) - Español latino
+### Guiones de narración
 
-**Software Gratuito:**
-- [Balabolka](http://www.cross-plus-a.com/balabolka.htm) - Windows
-- [NaturalReader](https://www.naturalreaders.com/online/)
+Están disponibles en `narration-scripts.html` y también embebidos como textos en el código:
 
-**Música Ambiental Libre:**
-- [FreePD](https://freepd.com/) - Música de dominio público
-- [Incompetech](https://incompetech.com/music/) - Música libre de Kevin MacLeod
-- [YouTube Audio Library](https://www.youtube.com/audiolibrary/)
+- **Respiratorio:** "El oxígeno entra y el dióxido de carbono sale. El aire limpio es importante. La nariz y los pulmones nos protegen del aire sucio."
+- **Circulatorio:** "El corazón bombea sangre con oxígeno. El ejercicio acelera el corazón. Podemos sentir el pulso en la muñeca."
+- **Inmunológico:** "El cuerpo tiene defensas. Si vivimos mal, el cuerpo se debilita. Comer bien y hacer ejercicio ayuda a defendernos."
 
 ## 🎨 Personalización
 
-### Cambiar Colores de los Sistemas
+### Colores de los sistemas (Three.js — `main.js`)
 
-En `main.js`, modifica los colores en las funciones:
+| Sistema | Material | Línea | Color |
+|---|---|---|---|
+| Respiratorio | `lungMaterial` | 175 | `0xff9999` |
+| Circulatorio | `heartMaterial` | 238 | `0xff0000` (emissive `0x330000`) |
+| Inmunológico | `whiteBloodCellMaterial` | 320 | `0xffffff` (emissive `0x444444`) |
 
 ```javascript
-// Sistema Respiratorio
-lungMaterial = new THREE.MeshStandardMaterial({
-    color: 0xff9999, // ← Cambia este valor
-    // ...
-});
-
-// Sistema Circulatorio
-heartMaterial = new THREE.MeshStandardMaterial({
-    color: 0xff0000, // ← Cambia este valor
-    // ...
-});
-
-// Sistema Inmunológico
-whiteBloodCellMaterial = new THREE.MeshStandardMaterial({
-    color: 0xffffff, // ← Cambia este valor
-    // ...
+const lungMaterial = new THREE.MeshStandardMaterial({
+    color: 0xff9999,   // ← Cambia este valor
+    roughness: 0.5,
+    metalness: 0.1
 });
 ```
 
-### Ajustar Posición de los Sistemas
+> 💡 En la versión A-Frame los colores se cambian en el HTML (atributos `material` de cada `<a-entity>`).
 
-```javascript
-// En createSystems()
-this.systems.respiratory.position.set(0, 2, -8);    // X, Y, Z
-this.systems.circulatory.position.set(8, 2, 0);
-this.systems.immune.position.set(-8, 2, 0);
-```
+### Posición de los sistemas
 
-### Modificar Velocidad de Animaciones
+**Three.js (`main.js`, líneas 145–157):** respiratorio en frente `(0, 2, -8)`, circulatorio a la derecha `(8, 2, 0)`, inmunológico a la izquierda `(-8, 2, 0)`.
 
-```javascript
-// Respiración (línea ~460)
-const breathScale = 1 + Math.sin(time * 2) * 0.1;
-//                                    ^ Aumenta para respirar más rápido
+**A-Frame (`index-aframe.html`):** respiratorio `(0, 1.6, -8)`, circulatorio `(8, 1.6, 0)`, inmunológico atrás `(0, 1.6, 8)`, final a la izquierda `(-8, 1.6, 4)`.
 
-// Latido del corazón (línea ~466)
-const heartBeat = 1 + Math.sin(time * 4) * 0.15;
-//                                   ^ Aumenta para latir más rápido
+### Velocidad de animaciones (Three.js — `animateSystems()`, línea 624)
 
-// Ataque inmunológico (línea ~472)
-const attack = Math.sin(time * 1.5) * 0.5 + 0.5;
-//                            ^ Aumenta para moverse más rápido
-```
+| Animación | Línea | Expresión |
+|---|---|---|
+| Respiración | 629 | `1 + Math.sin(time * 2) * 0.1` — ↑ para respirar más rápido |
+| Latido del corazón | 636 | `1 + Math.sin(time * 4) * 0.15` — ↑ para latir más rápido |
+| Ataque inmunológico | 642 | `Math.sin(time * 1.5) * 0.5 + 0.5` — ↑ para moverse más rápido |
 
-## 🔧 Requisitos Técnicos
+En la versión A-Frame el latido se controla con el componente `heartbeat` (`bpm: 90`, `lubScale`/`dubScale`).
 
-### Navegadores Compatibles con WebXR
+## 🔧 Requisitos técnicos
 
-✅ **Escritorio:**
-- Chrome/Edge 79+
-- Firefox 98+
-- Opera 66+
+- **Navegador con soporte WebXR** para el modo VR (Chrome/Edge en Android, Meta Quest Browser, Samsung Internet).
+- **HTTPS o `localhost`** (WebXR y el audio requieren contexto seguro en producción).
+- **GPU** compatible con WebGL 2.0.
+- **RAM** mínima: 4 GB (recomendado 8 GB).
+- **Visores compatibles**: Meta Quest 2/3/Pro, HTC Vive, Valve Index, Google Cardboard.
 
-✅ **Móvil (con visor VR):**
-- Chrome para Android
-- Samsung Internet
-- Oculus Browser
+Sin visor también funciona en escritorio/móvil: el recorrido se puede completar con mouse y teclado o pantalla táctil.
 
-### Dispositivos VR Recomendados
+## 🐛 Solución de problemas
 
-- Meta Quest 2 / 3 / Pro
-- PlayStation VR2
-- HTC Vive
-- Valve Index
-- Google Cardboard (limitado)
+| Problema | Solución |
+|---|---|
+| "Cross-Origin Request Blocked" | Sirve el proyecto con un servidor HTTP (npm/python), no lo abras con doble clic. |
+| El botón de VR no aparece | Verifica el soporte WebXR de tu navegador y que el sitio esté bajo HTTPS/localhost. |
+| No se ve nada en VR | Conecta el visor, otorga permisos al navegador y actualiza drivers/firmware. |
+| El audio no se reproduce | Revisa que existan los archivos en `audio/` y que el navegador permita autoplay tras interacción del usuario (botón "COMENZAR"). |
 
-### Requisitos de Hardware
+## 🎓 Objetivos educativos
 
-- **GPU**: Compatible con WebGL 2.0
-- **RAM**: Mínimo 4GB
-- **Procesador**: Moderno (últimos 5 años)
+- **Anatomía básica**: estructura y ubicación de los sistemas del cuerpo.
+- **Fisiología**: cómo funcionan (respiración, bombeo de sangre, defensas).
+- **Salud**: hábitos que fortalecen el organismo.
+- **Ciencia y tecnología**: aplicación educativa de la realidad virtual.
 
-## 📱 Probar sin Dispositivo VR
+## 🚀 Mejoras futuras
 
-Puedes probar la aplicación sin un visor VR:
+- [ ] Agregar más sistemas (digestivo, nervioso, óseo).
+- [ ] Quiz interactivo por sistema.
+- [ ] Modo multijugador educativo.
+- [ ] Modelos 3D con mayor nivel de detalle.
+- [ ] Minijuegos educativos.
+- [ ] Soporte multilingüe.
+- [ ] Integración con controladores VR.
+- [ ] Modo AR (Realidad Aumentada).
 
-1. Usa el **mouse** para rotar la vista
-2. Los sistemas aparecerán automáticamente al girar
-3. Haz **clic** en un sistema para activar su narración
+## 📚 Recursos
 
-## 🐛 Solución de Problemas
-
-### "Cross-Origin Request Blocked"
-- Debes usar un servidor local (no abrir el archivo directamente)
-- Usa una de las opciones de instalación mencionadas arriba
-
-### El botón VR no aparece
-- Verifica que tu navegador soporte WebXR
-- Prueba con Chrome o Firefox
-- En Chrome, habilita: `chrome://flags/#webxr`
-
-### No se ve nada en VR
-- Verifica que tu dispositivo esté conectado correctamente
-- Otorga permisos de acceso al navegador
-- Actualiza los drivers de tu dispositivo VR
-
-### El audio no se reproduce
-- Verifica que los archivos de audio existan en la carpeta `audio/`
-- Descomenta el código de audio en `main.js`
-- Algunos navegadores requieren interacción del usuario primero
-
-## 🎓 Objetivos Educativos
-
-Este proyecto busca enseñar:
-
-- **Anatomía básica**: Estructura de los sistemas del cuerpo
-- **Fisiología**: Cómo funcionan los sistemas
-- **Salud**: Importancia de cuidar nuestro cuerpo
-- **Ciencia**: Conceptos científicos de forma visual
-- **Tecnología**: Uso educativo de la realidad virtual
-
-## 🚀 Mejoras Futuras
-
-- [ ] Agregar más sistemas (digestivo, nervioso, óseo)
-- [ ] Quiz interactivo sobre cada sistema
-- [ ] Modo multijugador educativo
-- [ ] Modelos 3D más detallados
-- [ ] Minijuegos educativos
-- [ ] Soporte para múltiples idiomas
-- [ ] Integración con controladores VR
-- [ ] Modo AR (Realidad Aumentada)
-
-## 📚 Recursos Adicionales
-
+- [A-Frame](https://aframe.io/) — framework para web VR.
 - [Three.js Documentation](https://threejs.org/docs/)
 - [WebXR Device API](https://www.w3.org/TR/webxr/)
-- [MDN Web Docs - WebXR](https://developer.mozilla.org/en-US/docs/Web/API/WebXR_Device_API)
+- [MDN — WebXR](https://developer.mozilla.org/es/docs/Web/API/WebXR_Device_API)
 
 ## 📄 Licencia
 
-Este proyecto es de código abierto y está disponible para uso educativo.
+MIT — consulta el archivo [LICENSE](LICENSE) para más detalles. Disponible para uso educativo.
 
 ## 👨‍💻 Autor
 
-Desarrollado con ❤️ para educación en realidad virtual
+- **Renzo Caycho** — [github.com/zekkencito](https://github.com/zekkencito)
+- Repositorio: [github.com/zekkencito/ExperienciaVR](https://github.com/zekkencito/ExperienciaVR)
+- Demo: [vrbody.caychopomachagua.dev](https://vrbody.caychopomachagua.dev)
 
 ---
 
